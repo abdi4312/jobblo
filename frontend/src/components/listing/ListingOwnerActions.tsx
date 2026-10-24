@@ -180,5 +180,3 @@ export const ListingOwnerActions = ({
     </>
   );
 };
-
-export default ListingOwnerActions;

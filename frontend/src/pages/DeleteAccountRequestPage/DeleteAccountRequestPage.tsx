@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, ShieldAlert } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import mainLink from '../../api/mainURLs';
+import { useMutation } from '@tanstack/react-query';
+import { createSupportTicket } from '../../api/supportAPI';
 import { getErrorMessage } from '../../utils/getErrorMessage';
 
 const MAX_MESSAGE_LENGTH = 2000;
@@ -12,7 +13,8 @@ export default function DeleteAccountRequestPage() {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [confirmed, setConfirmed] = useState(false);
-  const [sending, setSending] = useState(false);
+  const ticketMutation = useMutation({ mutationFn: createSupportTicket });
+  const sending = ticketMutation.isPending;
   const [submitted, setSubmitted] = useState(false);
   const [fieldError, setFieldError] = useState('');
 
@@ -48,7 +50,6 @@ export default function DeleteAccountRequestPage() {
       return;
     }
 
-    setSending(true);
     setFieldError('');
 
     try {
@@ -62,7 +63,7 @@ export default function DeleteAccountRequestPage() {
         safeMessage || 'Ingen tilleggsmelding.',
       ].join('\n');
 
-      await mainLink.post('/api/support/tickets', {
+      await ticketMutation.mutateAsync({
         email: normalizedEmail,
         subject: DELETION_SUBJECT,
         message: payloadMessage,
@@ -74,8 +75,6 @@ export default function DeleteAccountRequestPage() {
       setConfirmed(false);
     } catch (error) {
       toast.error(getErrorMessage(error, 'Kunne ikke sende forespørselen. Prøv igjen senere.'));
-    } finally {
-      setSending(false);
     }
   };
 

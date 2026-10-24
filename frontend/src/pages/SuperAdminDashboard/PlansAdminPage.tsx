@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Edit, ShieldCheck, Settings, Info, Plus, Trash2, CreditCard } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import {
     getPlans,
@@ -66,31 +66,31 @@ interface PlanForm {
 
 function ConfigToggle({ config, onToggle }: { config: GlobalConfig; onToggle: (key: string, value: boolean) => void }) {
     return (
-        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-md border border-border">
             <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-800">{config.key.replace(/_/g, ' ')}</p>
+                <p className="text-sm font-medium text-foreground">{config.key.replace(/_/g, ' ')}</p>
                 {config.description && (
-                    <p className="text-xs text-gray-400 mt-0.5">{config.description}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{config.description}</p>
                 )}
             </div>
             <button
                 onClick={() => onToggle(config.key, !config.value)}
-                className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ml-3 ${config.value ? 'bg-[#2d4a3e]' : 'bg-gray-300'}`}
+                className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ml-3 ${config.value ? 'bg-primary' : 'bg-muted-foreground/30'}`}
                 aria-label={`${config.key.replace(/_/g, ' ')}: ${config.value ? 'På' : 'Av'}`}
                 role="switch"
                 aria-checked={config.value}
             >
-                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${config.value ? 'translate-x-5' : ''}`} />
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-card rounded-full shadow-sm transition-transform ${config.value ? 'translate-x-5' : ''}`} />
             </button>
         </div>
     );
 }
 
+const NO_PLANS: Plan[] = [];
+const NO_CONFIGS: GlobalConfig[] = [];
+
 export default function PlansAdminPage() {
     const qc = useQueryClient();
-    const [plans, setPlans] = useState<Plan[]>([]);
-    const [configs, setConfigs] = useState<GlobalConfig[]>([]);
-    const [loading, setLoading] = useState(true);
     const [editTarget, setEditTarget] = useState<Plan | null>(null);
     const [showEdit, setShowEdit] = useState(false);
     const [form, setForm] = useState<PlanForm>({
@@ -101,27 +101,38 @@ export default function PlansAdminPage() {
     });
     const [newFeature, setNewFeature] = useState('');
 
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        try {
+    const adminDataQuery = useQuery({
+        queryKey: ['admin', 'plans-config'],
+        queryFn: async () => {
             const [plansData, configsData] = await Promise.all([getPlans(), getConfigs()]);
-            setPlans(Array.isArray(plansData) ? plansData : plansData?.plans ?? []);
+            const plans: Plan[] = Array.isArray(plansData) ? plansData : plansData?.plans ?? [];
             const configArr = Array.isArray(configsData) ? configsData : configsData?.configs ?? [];
             if (configArr.length === 0 || !configArr.some((c: GlobalConfig) => c.key === 'STRIPE_TEST_MODE')) {
                 await initializeConfigs();
                 const newConfigs = await getConfigs();
-                setConfigs(Array.isArray(newConfigs) ? newConfigs : newConfigs?.configs ?? []);
-            } else {
-                setConfigs(configArr);
+                return { plans, configs: (Array.isArray(newConfigs) ? newConfigs : newConfigs?.configs ?? []) as GlobalConfig[] };
             }
-        } catch {
-            toast.error('Kunne ikke hente data');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+            return { plans, configs: configArr as GlobalConfig[] };
+        },
+        retry: false,
+    });
+    const plans = adminDataQuery.data?.plans ?? NO_PLANS;
+    const configs = adminDataQuery.data?.configs ?? NO_CONFIGS;
+    const loading = adminDataQuery.isFetching;
+    const fetchData = adminDataQuery.refetch;
 
-    useEffect(() => { fetchData(); }, [fetchData]);
+    useEffect(() => {
+        if (adminDataQuery.isError) toast.error('Kunne ikke hente data');
+    }, [adminDataQuery.isError]);
+
+    const updatePlanMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updatePlan>[1] }) => updatePlan(id, data),
+    });
+    const updateConfigMutation = useMutation({
+        mutationFn: ({ key, value }: { key: string; value: unknown }) => updateConfig(key, value),
+        // useConfigByKey readers (job detail, explore ads) cache under ['config', key].
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['config'] }),
+    });
 
     const openEdit = (plan: Plan) => {
         setEditTarget(plan);
@@ -168,7 +179,7 @@ export default function PlansAdminPage() {
                     hasAnalytics: form.hasAnalytics,
                 },
             };
-            await updatePlan(editTarget._id, updatedPlan);
+            await updatePlanMutation.mutateAsync({ id: editTarget._id, data: updatedPlan });
             qc.invalidateQueries({ queryKey: ['plans'] });
             toast.success('Plan oppdatert.');
             setShowEdit(false);
@@ -182,7 +193,7 @@ export default function PlansAdminPage() {
 
     const handleToggleConfig = async (key: string, value: boolean) => {
         try {
-            await updateConfig(key, value);
+            await updateConfigMutation.mutateAsync({ key, value });
             toast.success('Innstilling oppdatert.');
             fetchData();
         } catch {
@@ -194,7 +205,7 @@ export default function PlansAdminPage() {
 
     const handleToggleStripeTestMode = async (value: boolean) => {
         try {
-            await updateConfig('STRIPE_TEST_MODE', value);
+            await updateConfigMutation.mutateAsync({ key: 'STRIPE_TEST_MODE', value });
             toast.success(value ? 'Stripe testmodus aktivert. Test-nøkler er nå i bruk.' : 'Stripe testmodus deaktivert. Produksjons-nøkler er nå i bruk.');
             fetchData();
         } catch {
@@ -219,11 +230,11 @@ export default function PlansAdminPage() {
             header: 'Plan',
             render: (p) => (
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gray-100 rounded-xl">
-                        <ShieldCheck size={18} className="text-gray-600" />
+                    <div className="p-2 bg-muted rounded-md">
+                        <ShieldCheck size={18} className="text-muted-foreground" />
                     </div>
                     <div>
-                        <p className="text-sm font-semibold text-gray-800">{p.name}</p>
+                        <p className="text-sm font-semibold text-foreground">{p.name}</p>
                         <AdminStatusBadge status={p.type} />
                     </div>
                 </div>
@@ -232,12 +243,12 @@ export default function PlansAdminPage() {
         {
             key: 'price',
             header: 'Pris',
-            render: (p) => <span className="font-semibold text-gray-800">{p.price} NOK</span>,
+            render: (p) => <span className="font-semibold text-foreground">{p.price} NOK</span>,
         },
         {
             key: 'contacts',
             header: 'Kontakter/mnd',
-            render: (p) => <span className="text-sm text-gray-600">{p.entitlements?.freeContact ?? 0}</span>,
+            render: (p) => <span className="text-sm text-muted-foreground">{p.entitlements?.freeContact ?? 0}</span>,
         },
         {
             key: 'visibility',
@@ -252,7 +263,7 @@ export default function PlansAdminPage() {
             key: 'badge',
             header: 'Merke',
             render: (p) => (
-                <span className={`text-xs font-medium ${p.entitlements?.hasBadge ? 'text-green-600' : 'text-gray-400'}`}>
+                <span className={`text-xs font-medium ${p.entitlements?.hasBadge ? 'text-green-600' : 'text-muted-foreground'}`}>
                     {p.entitlements?.hasBadge ? 'Ja' : 'Nei'}
                 </span>
             ),
@@ -261,7 +272,7 @@ export default function PlansAdminPage() {
             key: 'analytics',
             header: 'Analyse',
             render: (p) => (
-                <span className={`text-xs font-medium ${p.entitlements?.hasAnalytics ? 'text-green-600' : 'text-gray-400'}`}>
+                <span className={`text-xs font-medium ${p.entitlements?.hasAnalytics ? 'text-green-600' : 'text-muted-foreground'}`}>
                     {p.entitlements?.hasAnalytics ? 'Ja' : 'Nei'}
                 </span>
             ),
@@ -292,13 +303,13 @@ export default function PlansAdminPage() {
             />
 
             {/* Stripe Test Mode Toggle */}
-            <div className={`rounded-2xl border p-5 ${stripeTestMode?.value ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
+            <div className={`rounded-lg border p-5 ${stripeTestMode?.value ? 'bg-amber-50 border-amber-200' : 'bg-card border-border'}`}>
                 <div className="flex items-center justify-between gap-4">
                     <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                             <CreditCard size={16} /> Stripe Testmodus
                         </h3>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                             {stripeTestMode?.value
                                 ? 'Aktiv: Betalinger bruker Stripe test-nøkler. Ingen ekte belastninger skjer.'
                                 : 'Inaktiv: Betalinger bruker produksjons-nøkler (ekte belastninger).'}
@@ -311,30 +322,30 @@ export default function PlansAdminPage() {
                         <button
                             onClick={() => handleToggleStripeTestMode(!stripeTestMode?.value)}
                             disabled={stripeTestMode === undefined}
-                            className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ${stripeTestMode?.value ? 'bg-amber-500' : 'bg-gray-300'}`}
+                            className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ${stripeTestMode?.value ? 'bg-amber-500' : 'bg-muted-foreground/30'}`}
                             aria-label={`Stripe testmodus: ${stripeTestMode?.value ? 'På' : 'Av'}`}
                             role="switch"
                             aria-checked={!!stripeTestMode?.value}
                         >
-                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${stripeTestMode?.value ? 'translate-x-6' : ''}`} />
+                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-card rounded-full shadow-sm transition-transform ${stripeTestMode?.value ? 'translate-x-6' : ''}`} />
                         </button>
                     </div>
                 </div>
             </div>
 
             {/* Global Feature Toggles */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
-                <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <div className="bg-card rounded-lg border border-border p-5">
+                <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
                     <Settings size={16} /> Globale funksjonsbrytere
                 </h3>
                 {loading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {Array.from({ length: 4 }).map((_, i) => (
-                            <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />
+                            <div key={i} className="h-16 bg-muted rounded-md animate-pulse" />
                         ))}
                     </div>
                 ) : configs.length === 0 ? (
-                    <p className="text-sm text-gray-400">Ingen konfigurasjoner funnet.</p>
+                    <p className="text-sm text-muted-foreground">Ingen konfigurasjoner funnet.</p>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {configs.filter((config) => config.key !== 'STRIPE_TEST_MODE').map((config) => (
@@ -357,114 +368,114 @@ export default function PlansAdminPage() {
             {/* Edit plan modal */}
             {showEdit && editTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="edit-plan-title">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4 overflow-y-auto max-h-[90vh]">
-                        <h2 id="edit-plan-title" className="text-lg font-bold text-gray-900">Rediger: {editTarget.name}</h2>
+                    <div className="bg-card rounded-lg shadow-xl w-full max-w-lg p-6 space-y-4 overflow-y-auto max-h-[90vh]">
+                        <h2 id="edit-plan-title" className="text-lg font-bold text-foreground">Rediger: {editTarget.name}</h2>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label htmlFor="ep-name" className="block text-sm font-medium text-gray-700 mb-1">Navn *</label>
+                                <label htmlFor="ep-name" className="block text-sm font-medium text-foreground mb-1">Navn *</label>
                                 <input id="ep-name" type="text" value={form.name}
                                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                    className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50" />
                             </div>
                             <div>
-                                <label htmlFor="ep-price" className="block text-sm font-medium text-gray-700 mb-1">Pris (NOK) *</label>
+                                <label htmlFor="ep-price" className="block text-sm font-medium text-foreground mb-1">Pris (NOK) *</label>
                                 <input id="ep-price" type="number" min="0" value={form.price}
                                     onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-                                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                    className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50" />
                             </div>
                             <div>
-                                <label htmlFor="ep-type" className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+                                <label htmlFor="ep-type" className="block text-sm font-medium text-foreground mb-1">Type *</label>
                                 <select id="ep-type" value={form.type}
                                     onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as 'private' | 'business' }))}
-                                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50">
+                                    className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50">
                                     <option value="private">Privat</option>
                                     <option value="business">Bedrift</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1 pt-5">
+                                <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-1 pt-5">
                                     <input type="checkbox" checked={form.isActive}
                                         onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
-                                        className="w-4 h-4 rounded border-gray-300 text-[#2d4a3e] focus:ring-[#2d4a3e]" />
+                                        className="w-4 h-4 rounded border-border text-primary focus:ring-ring/50" />
                                     Aktiv
                                 </label>
                             </div>
                         </div>
 
-                        <div className="border-t border-gray-100 pt-4">
-                            <h4 className="text-sm font-semibold text-gray-700 mb-3">Rettigheter og funksjoner</h4>
+                        <div className="border-t border-border pt-4">
+                            <h4 className="text-sm font-semibold text-foreground mb-3">Rettigheter og funksjoner</h4>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label htmlFor="ep-contacts" className="block text-sm font-medium text-gray-700 mb-1">Gratis kontakter/mnd</label>
+                                    <label htmlFor="ep-contacts" className="block text-sm font-medium text-foreground mb-1">Gratis kontakter/mnd</label>
                                     <input id="ep-contacts" type="number" min="0" value={form.freeContact}
                                         onChange={(e) => setForm((f) => ({ ...f, freeContact: e.target.value }))}
-                                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                        className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50" />
                                 </div>
                                 <div>
-                                    <label htmlFor="ep-radius" className="block text-sm font-medium text-gray-700 mb-1">Søkeradius (km)</label>
+                                    <label htmlFor="ep-radius" className="block text-sm font-medium text-foreground mb-1">Søkeradius (km)</label>
                                     <input id="ep-radius" type="number" min="0" value={form.radius}
                                         onChange={(e) => setForm((f) => ({ ...f, radius: e.target.value }))}
-                                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                        className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50" />
                                 </div>
                                 <div>
-                                    <label htmlFor="ep-extra-price" className="block text-sm font-medium text-gray-700 mb-1">Ekstra kontakt (NOK)</label>
+                                    <label htmlFor="ep-extra-price" className="block text-sm font-medium text-foreground mb-1">Ekstra kontakt (NOK)</label>
                                     <input id="ep-extra-price" type="number" min="0" step="0.01" value={form.perContactPrice}
                                         onChange={(e) => setForm((f) => ({ ...f, perContactPrice: e.target.value }))}
-                                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                        className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50" />
                                 </div>
                                 <div>
-                                    <label htmlFor="ep-unlock" className="block text-sm font-medium text-gray-700 mb-1">Tilgangsforsinkelse (min)</label>
+                                    <label htmlFor="ep-unlock" className="block text-sm font-medium text-foreground mb-1">Tilgangsforsinkelse (min)</label>
                                     <input id="ep-unlock" type="number" min="0" value={form.ContactUnlock}
                                         onChange={(e) => setForm((f) => ({ ...f, ContactUnlock: e.target.value }))}
-                                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                        className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50" />
                                 </div>
                                 <div>
-                                    <label htmlFor="ep-max-jobs" className="block text-sm font-medium text-gray-700 mb-1">Maks jobbverdi (NOK)</label>
+                                    <label htmlFor="ep-max-jobs" className="block text-sm font-medium text-foreground mb-1">Maks jobbverdi (NOK)</label>
                                     <input id="ep-max-jobs" type="number" min="0" step="0.01" value={form.maxJobsValue}
                                         onChange={(e) => setForm((f) => ({ ...f, maxJobsValue: e.target.value }))}
-                                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                        className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50" />
                                 </div>
                                 <div>
-                                    <label htmlFor="ep-max-contact" className="block text-sm font-medium text-gray-700 mb-1">Maks kontakter</label>
+                                    <label htmlFor="ep-max-contact" className="block text-sm font-medium text-foreground mb-1">Maks kontakter</label>
                                     <input id="ep-max-contact" type="number" min="0" value={form.maxContact}
                                         onChange={(e) => setForm((f) => ({ ...f, maxContact: e.target.value }))}
-                                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                        className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50" />
                                 </div>
                                 <div>
-                                    <label htmlFor="ep-visibility" className="block text-sm font-medium text-gray-700 mb-1">Synlighet (0-5)</label>
+                                    <label htmlFor="ep-visibility" className="block text-sm font-medium text-foreground mb-1">Synlighet (0-5)</label>
                                     <input id="ep-visibility" type="number" min="0" max="5" value={form.visibilityLevel}
                                         onChange={(e) => setForm((f) => ({ ...f, visibilityLevel: e.target.value }))}
-                                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                        className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50" />
                                 </div>
                                 <div>
-                                    <label htmlFor="ep-location" className="block text-sm font-medium text-gray-700 mb-1">Plasseringspresisjon</label>
+                                    <label htmlFor="ep-location" className="block text-sm font-medium text-foreground mb-1">Plasseringspresisjon</label>
                                     <select id="ep-location" value={form.locationPrecision}
                                         onChange={(e) => setForm((f) => ({ ...f, locationPrecision: e.target.value }))}
-                                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50">
+                                        className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50">
                                         <option value="approximate">Omtrentlig</option>
                                         <option value="exact">Nøyaktig</option>
                                     </select>
                                 </div>
                             </div>
                             <div className="flex items-center gap-6 mt-3">
-                                <label className="flex items-center gap-2 text-sm text-gray-700">
+                                <label className="flex items-center gap-2 text-sm text-foreground">
                                     <input type="checkbox" checked={form.hasBadge}
                                         onChange={(e) => setForm((f) => ({ ...f, hasBadge: e.target.checked }))}
-                                        className="w-4 h-4 rounded border-gray-300 text-[#2d4a3e] focus:ring-[#2d4a3e]" />
+                                        className="w-4 h-4 rounded border-border text-primary focus:ring-ring/50" />
                                     Verifisert merke
                                 </label>
-                                <label className="flex items-center gap-2 text-sm text-gray-700">
+                                <label className="flex items-center gap-2 text-sm text-foreground">
                                     <input type="checkbox" checked={form.hasAnalytics}
                                         onChange={(e) => setForm((f) => ({ ...f, hasAnalytics: e.target.checked }))}
-                                        className="w-4 h-4 rounded border-gray-300 text-[#2d4a3e] focus:ring-[#2d4a3e]" />
+                                        className="w-4 h-4 rounded border-border text-primary focus:ring-ring/50" />
                                     Analyse
                                 </label>
                             </div>
                         </div>
 
-                        <div className="border-t border-gray-100 pt-4">
-                            <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                        <div className="border-t border-border pt-4">
+                            <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1">
                                 <Info size={14} /> Funksjoner (vises for brukere)
                             </h4>
                             <div className="space-y-2 mb-2">
@@ -476,7 +487,7 @@ export default function PlansAdminPage() {
                                                 updated[idx] = e.target.value;
                                                 setForm((f) => ({ ...f, featuresText: updated }));
                                             }}
-                                            className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                            className="flex-1 px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50" />
                                         <button onClick={() => removeFeature(idx)}
                                             className="p-1.5 text-red-400 hover:text-red-600 transition-colors">
                                             <Trash2 size={14} />
@@ -489,21 +500,21 @@ export default function PlansAdminPage() {
                                     onChange={(e) => setNewFeature(e.target.value)}
                                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addFeature(); } }}
                                     placeholder="Legg til funksjon…"
-                                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                    className="flex-1 px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50" />
                                 <button onClick={addFeature}
-                                    className="flex items-center gap-1 px-3 py-2 text-xs font-medium text-[#2d4a3e] bg-green-50 hover:bg-green-100 rounded-xl transition-colors">
+                                    className="flex items-center gap-1 px-3 py-2 text-xs font-medium text-primary bg-green-50 hover:bg-green-100 rounded-md transition-colors">
                                     <Plus size={14} /> Legg til
                                 </button>
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                        <div className="flex justify-end gap-2 pt-2 border-t border-border">
                             <button onClick={() => setShowEdit(false)}
-                                className="px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
+                                className="px-4 py-2.5 text-sm font-medium text-muted-foreground bg-muted hover:bg-accent rounded-md transition-colors">
                                 Avbryt
                             </button>
                             <button onClick={handleSavePlan}
-                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#2d4a3e] hover:bg-[#233b31] rounded-xl transition-colors">
+                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary/90 rounded-md transition-colors">
                                 <Settings size={14} /> Lagre endringer
                             </button>
                         </div>

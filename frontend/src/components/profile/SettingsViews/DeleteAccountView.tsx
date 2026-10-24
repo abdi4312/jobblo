@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import type { SettingsContextType } from '../../../pages/SettingsPage';
-import mainLink from '../../../api/mainURLs';
+import { deleteUserAccount } from '../../../features/profile/api';
 import { useUserStore } from '../../../stores/userStore';
 import { getErrorMessage } from '../../../utils/getErrorMessage';
 
@@ -29,17 +29,9 @@ export const DeleteAccountView = () => {
   const navigate = useNavigate();
 
   const [confirmText, setConfirmText] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const canDelete = confirmText.trim().toUpperCase() === CONFIRM_WORD && !isDeleting && !!user?._id;
-
-  const handleDelete = async () => {
-    if (!canDelete) return;
-    setIsDeleting(true);
-    try {
-      await mainLink.delete(`/api/users/${user!._id}`, {
-        data: { feedback: form.feedback?.trim() || undefined },
-      });
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteUserAccount(user!._id, form.feedback?.trim() || undefined),
+    onSuccess: async () => {
       toast.success('Profilen din er slettet.');
       try {
         await logout();
@@ -47,12 +39,18 @@ export const DeleteAccountView = () => {
         queryClient.clear();
         navigate('/', { replace: true });
       }
-    } catch (err) {
-      // A 409 here is the "you still have live orders" case, and its message
-      // tells the user exactly what to do — so surface it rather than a generic.
-      toast.error(getErrorMessage(err, 'Kunne ikke slette profilen. Prøv igjen.'));
-      setIsDeleting(false);
-    }
+    },
+    // A 409 here is the "you still have live orders" case, and its message
+    // tells the user exactly what to do — so surface it rather than a generic.
+    onError: (err) => toast.error(getErrorMessage(err, 'Kunne ikke slette profilen. Prøv igjen.')),
+  });
+  const isDeleting = deleteMutation.isPending;
+
+  const canDelete = confirmText.trim().toUpperCase() === CONFIRM_WORD && !isDeleting && !!user?._id;
+
+  const handleDelete = () => {
+    if (!canDelete) return;
+    deleteMutation.mutate();
   };
 
   return (

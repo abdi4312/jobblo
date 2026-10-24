@@ -14,7 +14,7 @@
  */
 
 /** Application / selection stage — before an order exists. */
-export const APPLICATION_EVENTS = [
+const APPLICATION_EVENTS = [
   'new_job_request',
   'order_approved',
   'request_declined',
@@ -22,7 +22,7 @@ export const APPLICATION_EVENTS = [
 ] as const;
 
 /** Money and work stage — an order exists. */
-export const ORDER_EVENTS = [
+const ORDER_EVENTS = [
   'order_paid',
   'provider_connect_deadline',
   'provider_connect_timeout_refunded',
@@ -41,7 +41,7 @@ export const ORDER_EVENTS = [
 ] as const;
 
 /** Dispute stage. */
-export const DISPUTE_EVENTS = ['dispute_opened', 'dispute_updated', 'dispute_resolved'] as const;
+const DISPUTE_EVENTS = ['dispute_opened', 'dispute_updated', 'dispute_resolved'] as const;
 
 /**
  * Older spellings still reachable in the tree. Listened for, never emitted by new code.
@@ -52,7 +52,7 @@ export const DISPUTE_EVENTS = ['dispute_opened', 'dispute_updated', 'dispute_res
  * Keeping them costs one listener each and means an old server build does not go
  * silent against a new client.
  */
-export const LEGACY_ALIASES = ['order_started', 'ready_for_review'] as const;
+const LEGACY_ALIASES = ['order_started', 'ready_for_review'] as const;
 
 export const ALL_LIFECYCLE_EVENTS = [
   ...APPLICATION_EVENTS,
@@ -60,8 +60,6 @@ export const ALL_LIFECYCLE_EVENTS = [
   ...DISPUTE_EVENTS,
   ...LEGACY_ALIASES,
 ] as const;
-
-export type LifecycleEvent = (typeof ALL_LIFECYCLE_EVENTS)[number];
 
 /** Every payload carries `orderId` where an order exists; some also carry `status`. */
 export interface LifecyclePayload {

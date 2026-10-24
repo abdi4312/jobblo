@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { X, Search, UserPlus } from 'lucide-react';
-import mainLink from '../../../api/mainURLs';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { favoriteListsApi } from '../../../features/favoriteLists/api';
+import { favoriteListsKeys } from '../../../features/favoriteLists/hooks';
+import { useSearchUsers } from '../../../features/profile/hooks';
 import { toast } from 'react-hot-toast';
 
 interface User {
@@ -19,11 +21,16 @@ interface AddContributorModalProps {
 
 const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpen, onClose }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<User[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [submittedQuery, setSubmittedQuery] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+  const searchQueryResult = useSearchUsers(submittedQuery || undefined);
+  const searchResults: User[] = (submittedQuery && searchQueryResult.data) || [];
+  const isSearching = searchQueryResult.isFetching;
 
   const queryClient = useQueryClient();
+  const addContributorsMutation = useMutation({
+    mutationFn: (userIds: string[]) => favoriteListsApi.addContributors(listId, userIds),
+  });
 
   if (!isOpen) return null;
 
@@ -31,17 +38,7 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpe
     if (e) e.preventDefault();
     if (searchQuery.trim().length < 2) return;
 
-    setIsSearching(true);
-    try {
-      const response = await mainLink.get(
-        `/api/users/search?query=${encodeURIComponent(searchQuery.trim())}`
-      );
-      setSearchResults(response.data);
-    } catch (err) {
-      console.error('Search error:', err);
-    } finally {
-      setIsSearching(false);
-    }
+    setSubmittedQuery(searchQuery.trim());
   };
 
   const toggleUserSelection = (user: User) => {
@@ -64,17 +61,16 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpe
 
     try {
       const userIds = selectedUsers.map((u) => u._id);
-      await mainLink.post(`/api/lists/${listId}/contributors`, { userIds });
+      await addContributorsMutation.mutateAsync(userIds);
 
-      queryClient.invalidateQueries({
-        queryKey: ['favoriteLists', 'user', listId],
-      });
+      // Was ['favoriteLists', 'user', listId] — a user-lists key with a list id, so it matched nothing.
+      queryClient.invalidateQueries({ queryKey: favoriteListsKeys.list(listId) });
       toast.success(`${selectedUsers.length} bidragsytere lagt til`);
 
       onClose();
       // Reset state
       setSearchQuery('');
-      setSearchResults([]);
+      setSubmittedQuery('');
       setSelectedUsers([]);
     } catch {
       toast.error('Kunne ikke legge til bidragsytere');

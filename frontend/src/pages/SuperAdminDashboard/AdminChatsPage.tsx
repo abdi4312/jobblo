@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Copy, CheckCircle2, Eye, MessageSquare } from 'lucide-react';
@@ -47,7 +47,7 @@ function CopyButton({ value }: { value: string }) {
                     setTimeout(() => setCopied(false), 1500);
                 });
             }}
-            className="p-1 rounded text-gray-400 hover:text-gray-700 transition-colors"
+            className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Kopier Chat ID"
             title="Kopier Chat ID"
         >
@@ -84,7 +84,7 @@ export default function AdminChatsPage() {
             header: 'Chat ID',
             render: (c) => (
                 <div className="flex items-center gap-1">
-                    <span className="font-mono text-xs text-gray-600">
+                    <span className="font-mono text-xs text-muted-foreground">
                         {c._id.slice(0, 8)}…{c._id.slice(-4)}
                     </span>
                     <CopyButton value={c._id} />
@@ -98,11 +98,11 @@ export default function AdminChatsPage() {
                 const u = c.clientId;
                 return u ? (
                     <div>
-                        <p className="text-sm text-gray-800">{u.name}</p>
-                        <p className="text-xs text-gray-400">{u.email}</p>
+                        <p className="text-sm text-foreground">{u.name}</p>
+                        <p className="text-xs text-muted-foreground">{u.email}</p>
                     </div>
                 ) : (
-                    <span className="text-gray-400">–</span>
+                    <span className="text-muted-foreground">–</span>
                 );
             },
         },
@@ -113,11 +113,11 @@ export default function AdminChatsPage() {
                 const u = c.providerId;
                 return u ? (
                     <div>
-                        <p className="text-sm text-gray-800">{u.name}</p>
-                        <p className="text-xs text-gray-400">{u.email}</p>
+                        <p className="text-sm text-foreground">{u.name}</p>
+                        <p className="text-xs text-muted-foreground">{u.email}</p>
                     </div>
                 ) : (
-                    <span className="text-gray-400">–</span>
+                    <span className="text-muted-foreground">–</span>
                 );
             },
         },
@@ -128,23 +128,25 @@ export default function AdminChatsPage() {
                 c.serviceId ? (
                     <span className="text-sm truncate max-w-[120px] block">{c.serviceId.title}</span>
                 ) : (
-                    <span className="text-gray-400">–</span>
+                    <span className="text-muted-foreground">–</span>
                 ),
         },
         {
             key: 'orderId',
             header: 'Ordre-ID',
-            render: (c) =>
-                c.orderId ? (
+            render: (c) => {
+                const orderId = typeof c.orderId === 'object' ? c.orderId?._id : c.orderId;
+                return orderId ? (
                     <Link
-                        to={`/dashboard/safepay/${c.orderId}`}
-                        className="font-mono text-xs text-[#2d4a3e] hover:underline"
+                        to={`/dashboard/orders/${orderId}`}
+                        className="font-mono text-xs text-primary hover:underline"
                     >
-                        {String(c.orderId).slice(-8).toUpperCase()}
+                        {orderId.slice(-8).toUpperCase()}
                     </Link>
                 ) : (
-                    <span className="text-gray-400">–</span>
-                ),
+                    <span className="text-muted-foreground">–</span>
+                );
+            },
         },
         {
             key: 'status',
@@ -160,7 +162,7 @@ export default function AdminChatsPage() {
                         {c.reportCount}
                     </span>
                 ) : (
-                    <span className="text-xs text-gray-400">0</span>
+                    <span className="text-xs text-muted-foreground">0</span>
                 ),
         },
         {
@@ -188,7 +190,7 @@ export default function AdminChatsPage() {
                     </button>
                     <Link
                         to={`/dashboard/chat-review?chatId=${c._id}`}
-                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-[#2d4a3e] bg-[#eef5f2] hover:bg-[#d7ece4] rounded-lg transition-colors"
+                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/15 rounded-lg transition-colors"
                     >
                         <MessageSquare size={12} aria-hidden="true" /> Gjennomgå
                     </Link>

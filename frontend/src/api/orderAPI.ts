@@ -1,6 +1,6 @@
 import mainLink from './mainURLs';
 
-export interface Order {
+interface Order {
   _id: string;
   serviceId: {
     _id: string;
@@ -39,7 +39,7 @@ export interface Order {
   updatedAt: string;
 }
 
-export interface JobRequest {
+interface JobRequest {
   _id: string;
   serviceId: {
     _id: string;
@@ -58,26 +58,11 @@ export interface JobRequest {
   updatedAt: string;
 }
 
-export interface CreateOrderPayload {
-  serviceId: string;
-  price?: number;
-  scheduledDate?: string;
-  address?: string;
-}
-
 /**
  * Get all orders for current user
  */
 export const getAllOrders = async (): Promise<Order[]> => {
   const response = await mainLink.get('/api/orders');
-  return response.data;
-};
-
-/**
- * Get order by ID
- */
-export const getOrderById = async (orderId: string): Promise<Order> => {
-  const response = await mainLink.get(`/api/orders/${orderId}`);
   return response.data;
 };
 
@@ -92,21 +77,8 @@ export const getOrderById = async (orderId: string): Promise<Order> => {
 /**
  * Create a new job request (Application)
  */
-export const createJobRequest = async (payload: { serviceId: string; message?: string }): Promise<JobRequest> => {
+export const createJobRequest = async (payload: { serviceId: string; message?: string; sessionId?: string }): Promise<JobRequest> => {
   const response = await mainLink.post('/api/orders/request', payload);
-  return response.data;
-};
-
-/**
- * Update job request status (Approve/Reject)
- */
-export const updateJobRequestStatus = async (
-  requestId: string,
-  status: string
-): Promise<JobRequest> => {
-  const response = await mainLink.patch(`/api/orders/request/${requestId}`, {
-    status,
-  });
   return response.data;
 };
 
@@ -115,5 +87,10 @@ export const updateJobRequestStatus = async (
  */
 export const getMyJobRequests = async (): Promise<JobRequest[]> => {
   const response = await mainLink.get('/api/orders/requests/my');
+  return response.data;
+};
+
+export const getCompletedOrderDetails = async (orderId: string) => {
+  const response = await mainLink.get(`/api/orders/${orderId}/completed-details`);
   return response.data;
 };

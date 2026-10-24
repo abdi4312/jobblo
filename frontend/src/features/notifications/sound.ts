@@ -122,7 +122,7 @@ const getFallback = (): HTMLAudioElement | null => {
  * Idempotent, and safe to call from more than one place — unlike the old per-hook unlock,
  * there is only one context to unlock.
  */
-export function unlockNotificationSound(): void {
+function unlockNotificationSound(): void {
   if (unlocked || typeof window === 'undefined') return;
   unlocked = true;
 

@@ -1,6 +1,6 @@
 import { Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Input } from '../Ui/Input';
+import { Input } from '../developer/ui/input';
 
 interface AdminSearchInputProps {
     value: string;
@@ -23,7 +23,7 @@ export function AdminSearchInput({
         <div className={cn('relative', className)}>
             <Search
                 size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10"
+                className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10 text-muted-foreground"
                 aria-hidden="true"
             />
             <Input
@@ -33,16 +33,16 @@ export function AdminSearchInput({
                 placeholder={placeholder}
                 disabled={disabled}
                 className={cn(
-                    'w-full pl-9 pr-9 py-2.5 text-sm rounded-xl border-gray-200 bg-gray-50',
-                    'focus:bg-white focus:border-[#2d4a3e] focus:ring-2 focus:ring-[#2d4a3e]/10 focus:outline-none',
-                    'placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all',
+                    'h-9 w-full rounded-md bg-card pl-9 pr-9 text-sm shadow-xs',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
+                    'placeholder:text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all',
                     inputClassName
                 )}
             />
             {value && (
                 <button
                     onClick={() => onChange('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                     aria-label="Tøm søk"
                 >
                     <X size={14} />

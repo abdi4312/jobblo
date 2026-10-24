@@ -21,7 +21,7 @@
  */
 
 /** Strip to digits, optionally capped. The basis of every mask below. */
-export const digitsOnly = (value: string, max?: number): string => {
+const digitsOnly = (value: string, max?: number): string => {
   const digits = (value || '').replace(/\D/g, '');
   return typeof max === 'number' ? digits.slice(0, max) : digits;
 };
@@ -72,12 +72,6 @@ export const formatPhone = (value: string): string => {
   return parts.join(' ');
 };
 
-/** With the country code, for display outside a form — profiles, order details. */
-export const formatPhoneWithCode = (value: string): string => {
-  const formatted = formatPhone(value);
-  return formatted ? `+47 ${formatted}` : '';
-};
-
 /**
  * Eight digits, and a first digit that Nkom actually assigns.
  *
@@ -94,47 +88,3 @@ export const isValidPhone = (value: string): boolean => {
 
 /** Four digits, no grouping. Kept here so the cap lives with the other rules. */
 export const formatPostalCode = (value: string): string => digitsOnly(value, 4);
-
-export const isValidPostalCode = (value: string): boolean => /^\d{4}$/.test(digitsOnly(value, 4));
-
-// ── Organisation number ──────────────────────────────────────────────────────
-
-/** Nine digits, written in threes: `912 345 678`. */
-export const formatOrgNumber = (value: string): string => {
-  const d = digitsOnly(value, 9);
-  return d.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
-};
-
-/**
- * Nine digits with the MOD11 check digit Brønnøysund uses.
- *
- * Worth doing properly: a typo in an org number is invisible otherwise, and it is the one
- * field on the site that identifies a legal entity.
- */
-export const isValidOrgNumber = (value: string): boolean => {
-  const d = digitsOnly(value, 9);
-  if (d.length !== 9) return false;
-
-  const weights = [3, 2, 7, 6, 5, 4, 3, 2];
-  const sum = weights.reduce((total, weight, i) => total + weight * Number(d[i]), 0);
-  const remainder = sum % 11;
-  const check = remainder === 0 ? 0 : 11 - remainder;
-  // A remainder of 1 leaves a check digit of 10, which cannot be written — those numbers
-  // are simply not issued.
-  return check !== 10 && check === Number(d[8]);
-};
-
-// ── Money ────────────────────────────────────────────────────────────────────
-
-/**
- * Thousands separated with a non-breaking space, as Norwegian uses.
- *
- * For *display*. Amount inputs stay unformatted while being typed: grouping a number
- * mid-entry moves the caret on every fourth keystroke, which is far more annoying than an
- * ungrouped field.
- */
-export const formatAmount = (value: number | string): string => {
-  const n = typeof value === 'number' ? value : Number(digitsOnly(String(value)));
-  if (!Number.isFinite(n)) return '';
-  return n.toLocaleString('nb-NO');
-};

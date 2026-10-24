@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import mainLink from '../../api/mainURLs';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { fetchAdminServiceById, updateAdminServiceForm } from '../../api/admin';
 import CreateJobForm from '../../components/CreateJobForm/CreateJobForm';
 import { Spinner } from '../../components/Ui/Spinner';
 import { BackLink } from '../../components/Ui/BackLink';
@@ -10,10 +10,7 @@ import { useUserStore } from '../../stores/userStore';
 function useAdminJobDetail(id: string) {
   return useQuery({
     queryKey: ['admin', 'service', id],
-    queryFn: async () => {
-      const res = await mainLink.get(`/api/admin/services/${id}`);
-      return res.data.data.service;
-    },
+    queryFn: () => fetchAdminServiceById(id),
     enabled: !!id,
   });
 }
@@ -24,6 +21,9 @@ export default function AdminEditJobPage() {
   const user = useUserStore((s) => s.user);
 
   const { data: job, isLoading } = useAdminJobDetail(id ?? '');
+  const saveMutation = useMutation({
+    mutationFn: (formData: FormData) => updateAdminServiceForm(id!, formData),
+  });
 
   if (isLoading) {
     return (
@@ -35,14 +35,12 @@ export default function AdminEditJobPage() {
 
   if (!job) {
     return (
-      <div className="p-10 text-center text-gray-500">Oppdrag ikke funnet.</div>
+      <div className="p-10 text-center text-muted-foreground">Oppdrag ikke funnet.</div>
     );
   }
 
   const handleFormSubmit = async (formData: FormData) => {
-    await mainLink.put(`/api/admin/services/${id}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    await saveMutation.mutateAsync(formData);
     navigate('/dashboard/services');
   };
 
@@ -73,16 +71,16 @@ export default function AdminEditJobPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#EFF0EA]">
+    <div className="min-h-screen bg-muted">
       <div className="mx-auto w-full max-w-3xl px-4 pt-8 sm:px-6">
         <BackLink fallback="/dashboard/services" />
 
         <header className="mt-6 mb-8">
           <p className={MICRO_LABEL}>Admin · Rediger</p>
-          <h1 className="mt-2 text-[clamp(1.75rem,4vw,2.5rem)] font-bold leading-tight tracking-[-0.04em] text-[#0B0B0B]">
+          <h1 className="mt-2 text-[clamp(1.75rem,4vw,2.5rem)] font-bold leading-tight tracking-[-0.04em] text-foreground">
             Rediger oppdraget
           </h1>
-          <p className="mt-2 max-w-lg text-[0.9375rem] leading-relaxed text-[#63665F]">
+          <p className="mt-2 max-w-lg text-[0.9375rem] leading-relaxed text-muted-foreground">
             Endringene lagres direkte. Eier av oppdraget vil se dem umiddelbart.
           </p>
         </header>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, RotateCw, Search, TriangleAlert } from 'lucide-react';
 
-import mainLink from '../../api/mainURLs';
+import { getAllOrders } from '../../api/orderAPI';
 import { useMyServices, useServiceActions } from '../../features/services/hooks';
 import type { Service } from '../../features/services/types';
 import EmptyState from '../../components/Ui/EmptyState';
@@ -83,10 +83,7 @@ export default function MineAnnonser() {
 
   const { data: orders = [] } = useQuery({
     queryKey: ['my-orders'],
-    queryFn: async () => {
-      const response = await mainLink.get('/api/orders');
-      return response.data;
-    },
+    queryFn: getAllOrders,
   });
 
   const currentTab = tabs.find((tab) => tab.id === activeTab)!;

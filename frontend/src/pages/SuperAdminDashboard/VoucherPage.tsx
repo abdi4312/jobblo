@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Plus, Ban, Ticket, Percent, InfinityIcon, Calendar } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import mainLink from '../../api/mainURLs';
+import { createPromotionCode, deactivatePromotionCode, fetchPromotionCodes } from '../../api/admin';
 import {
     AdminDataTable,
     AdminStatusBadge,
@@ -63,15 +63,12 @@ export default function VoucherPage() {
 
     const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ['admin-coupons', page],
-        queryFn: async () => {
-            const resp = await mainLink.get('/api/admin/promotion-codes');
-            return { vouchers: resp.data.promotions as Voucher[], mode: resp.data.mode as string };
-        },
+        queryFn: () => fetchPromotionCodes<Voucher>(),
         staleTime: 30_000,
     });
 
     const deactivateMutation = useMutation({
-        mutationFn: (id: string) => mainLink.post(`/api/admin/promotion-codes/${id}/deactivate`),
+        mutationFn: deactivatePromotionCode,
         onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-coupons'] }); toast.success('Rabattkode deaktivert.'); },
         onError: (err: { response?: { data?: { error?: string } } }) => toast.error(err.response?.data?.error || 'Kunne ikke deaktivere rabattkoden.'),
     });
@@ -85,7 +82,7 @@ export default function VoucherPage() {
                 usageLimit: parseInt(values.usageLimit, 10) || 0,
             };
             if (editTarget) throw new Error('Stripe-rabattkoder kan ikke redigeres. Deaktiver og opprett en ny kode.');
-            await mainLink.post('/api/admin/promotion-codes', payload);
+            await createPromotionCode(payload);
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ['admin-coupons'] });
@@ -139,19 +136,19 @@ export default function VoucherPage() {
         {
             key: 'name',
             header: 'Navn',
-            render: (v) => <span className="text-sm font-semibold text-gray-800">{v.name}</span>,
+            render: (v) => <span className="text-sm font-semibold text-foreground">{v.name}</span>,
         },
         {
             key: 'code',
             header: 'Kode',
-            render: (v) => <span className="font-mono text-xs text-gray-500">{v.code}</span>,
+            render: (v) => <span className="font-mono text-xs text-muted-foreground">{v.code}</span>,
         },
         {
             key: 'usage',
             header: 'Bruk',
             render: (v) => (
-                <span className="text-sm font-medium text-gray-700">
-                    {(v.redemptions ?? v.usedBy?.length ?? 0)} / {(v.maxRedemptions ?? v.usageLimit) || <InfinityIcon size={14} className="inline text-gray-400" />}
+                <span className="text-sm font-medium text-foreground">
+                    {(v.redemptions ?? v.usedBy?.length ?? 0)} / {(v.maxRedemptions ?? v.usageLimit) || <InfinityIcon size={14} className="inline text-muted-foreground" />}
                 </span>
             ),
         },
@@ -177,7 +174,7 @@ export default function VoucherPage() {
         {
             key: 'duration',
             header: 'Varighet',
-            render: (v) => <span className="text-xs text-gray-600">{v.duration === 'repeating' ? `${v.durationInMonths} måneder` : v.duration || '–'}</span>,
+            render: (v) => <span className="text-xs text-muted-foreground">{v.duration === 'repeating' ? `${v.durationInMonths} måneder` : v.duration || '–'}</span>,
         },
         {
             key: 'status',
@@ -188,7 +185,7 @@ export default function VoucherPage() {
             key: 'dates',
             header: 'Periode',
             render: (v) => (
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-muted-foreground">
                     <span>{v.activeDate ? new Date(v.activeDate).toLocaleDateString('nb-NO') : '–'}</span>
                     <span className="mx-1">→</span>
                     <span>{v.expiresDate ? new Date(v.expiresDate).toLocaleDateString('nb-NO') : '–'}</span>
@@ -219,7 +216,7 @@ export default function VoucherPage() {
                 description={`Stripe-rabattkoder for medlemskap · ${data?.mode === 'test' ? 'SANDBOX' : data?.mode === 'live' ? 'LIVE' : 'Stripe-modus ukjent'}`}
                 actions={
                     <button onClick={openCreate}
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#2d4a3e] hover:bg-[#233b31] rounded-xl transition-colors">
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary/90 rounded-md transition-colors">
                         <Plus size={16} /> Ny kupong
                     </button>
                 }
@@ -250,8 +247,8 @@ export default function VoucherPage() {
             {/* Create / Edit dialog */}
             {isFormOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="voucher-form-title">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4 overflow-y-auto max-h-[90vh]">
-                        <h2 id="voucher-form-title" className="text-lg font-bold text-gray-900">
+                    <div className="bg-card rounded-lg shadow-xl w-full max-w-lg p-6 space-y-4 overflow-y-auto max-h-[90vh]">
+                        <h2 id="voucher-form-title" className="text-lg font-bold text-foreground">
                             {editTarget ? `Rediger: ${editTarget.name}` : 'Ny kupong'}
                         </h2>
 
@@ -259,92 +256,92 @@ export default function VoucherPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label htmlFor="v-name" className="block text-sm font-medium text-gray-700 mb-1">Navn *</label>
+                                <label htmlFor="v-name" className="block text-sm font-medium text-foreground mb-1">Navn *</label>
                                 <input id="v-name" type="text" value={form.name}
                                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                    className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50" />
                             </div>
                             <div>
-                                <label htmlFor="v-code" className="block text-sm font-medium text-gray-700 mb-1">Kode *</label>
+                                <label htmlFor="v-code" className="block text-sm font-medium text-foreground mb-1">Kode *</label>
                                 <input id="v-code" type="text" value={form.code}
                                     onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
-                                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 uppercase tracking-wider font-bold" />
+                                    className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50 uppercase tracking-wider font-bold" />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label htmlFor="v-type" className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+                                <label htmlFor="v-type" className="block text-sm font-medium text-foreground mb-1">Type *</label>
                                 <select id="v-type" value={form.type}
                                     onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as 'percentage' | 'fixed' }))}
-                                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50">
+                                    className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50">
                                     <option value="percentage">Prosent (%)</option>
                                     <option value="fixed">Fast beløp (NOK)</option>
                                 </select>
                             </div>
                             <div>
-                                <label htmlFor="v-amount" className="block text-sm font-medium text-gray-700 mb-1">Beløp *</label>
+                                <label htmlFor="v-amount" className="block text-sm font-medium text-foreground mb-1">Beløp *</label>
                                 <input id="v-amount" type="number" min="0" step="0.01" value={form.amount}
                                     onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-                                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                    className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50" />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Målgruppe</label>
-                                <p className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-600">Alle medlemsplaner</p>
+                                <label className="block text-sm font-medium text-foreground mb-1">Målgruppe</label>
+                                <p className="rounded-md border border-border bg-muted/50 px-3 py-2.5 text-sm text-muted-foreground">Alle medlemsplaner</p>
                             </div>
                             <div>
-                                <label htmlFor="v-usage" className="block text-sm font-medium text-gray-700 mb-1">Bruksgrense (0 = ubegrenset)</label>
+                                <label htmlFor="v-usage" className="block text-sm font-medium text-foreground mb-1">Bruksgrense (0 = ubegrenset)</label>
                                 <input id="v-usage" type="number" min="0" value={form.usageLimit}
                                     onChange={(e) => setForm((f) => ({ ...f, usageLimit: e.target.value }))}
-                                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                    className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50" />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label htmlFor="v-duration" className="block text-sm font-medium text-gray-700 mb-1">Varighet *</label>
+                                <label htmlFor="v-duration" className="block text-sm font-medium text-foreground mb-1">Varighet *</label>
                                 <select id="v-duration" value={form.duration}
                                     onChange={(e) => setForm((f) => ({ ...f, duration: e.target.value as VoucherForm['duration'] }))}
-                                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50">
+                                    className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50">
                                     <option value="once">Én gang</option>
                                     <option value="forever">For alltid</option>
                                     <option value="repeating">Gjentakende</option>
                                 </select>
                             </div>
                             {form.duration === 'repeating' ? <div>
-                                <label htmlFor="v-months" className="block text-sm font-medium text-gray-700 mb-1">Antall måneder *</label>
+                                <label htmlFor="v-months" className="block text-sm font-medium text-foreground mb-1">Antall måneder *</label>
                                 <input id="v-months" type="number" min="1" step="1" value={form.durationInMonths}
                                     onChange={(e) => setForm((f) => ({ ...f, durationInMonths: e.target.value }))}
-                                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                    className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50" />
                             </div> : <div />}
                         </div>
 
                         <div>
                             <div>
-                                <label htmlFor="v-expires" className="block text-sm font-medium text-gray-700 mb-1">Utløper *</label>
+                                <label htmlFor="v-expires" className="block text-sm font-medium text-foreground mb-1">Utløper *</label>
                                 <input id="v-expires" type="date" value={form.expiresDate}
                                     onChange={(e) => setForm((f) => ({ ...f, expiresDate: e.target.value }))}
-                                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                    className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50" />
                             </div>
                         </div>
 
-                        <label className="flex items-center gap-2 text-sm text-gray-700">
+                        <label className="flex items-center gap-2 text-sm text-foreground">
                             <input type="checkbox" checked={form.active}
                                 onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
-                                className="w-4 h-4 rounded border-gray-300 text-[#2d4a3e] focus:ring-[#2d4a3e]" />
+                                className="w-4 h-4 rounded border-border text-primary focus:ring-ring/50" />
                             Aktiv
                         </label>
 
                         <div className="flex justify-end gap-2 pt-2">
                             <button onClick={() => { setCreateOpen(false); setEditTarget(null); }}
-                                className="px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
+                                className="px-4 py-2.5 text-sm font-medium text-muted-foreground bg-muted hover:bg-accent rounded-md transition-colors">
                                 Avbryt
                             </button>
                             <button onClick={handleSave} disabled={saveMutation.isPending}
-                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#2d4a3e] hover:bg-[#233b31] rounded-xl transition-colors disabled:opacity-60">
+                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary/90 rounded-md transition-colors disabled:opacity-60">
                                 {saveMutation.isPending && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                                 {editTarget ? 'Oppdater' : 'Opprett'}
                             </button>

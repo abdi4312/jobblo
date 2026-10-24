@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
@@ -12,7 +13,7 @@ import {
   RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
-import mainLink from '../../../api/mainURLs';
+import { createConnectAccountLink, getConnectStatus, refreshConnectStatus } from '../../../api/stripeAPI';
 import { toast } from 'react-hot-toast';
 
 type OnboardingStatus = 'none' | 'started' | 'restricted' | 'enabled' | 'pending_verification';
@@ -109,84 +110,79 @@ const PROCESS_STEPS = [
 export const PayoutSettingsView = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [connectStatus, setConnectStatus] = useState<ConnectStatus | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [linking, setLinking] = useState(false);
-  const [statusError, setStatusError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const [platformSetupRequired, setPlatformSetupRequired] = useState(false);
+  const params = new URLSearchParams(location.search);
+  const returnedFromStripe = params.has('success') || params.has('refresh');
 
-  const fetchStatus = useCallback(async () => {
-    const response = await mainLink.get<ConnectStatus>('/api/connect/status');
-    setConnectStatus(response.data);
-    setStatusError(null);
-    return response.data;
-  }, []);
+  // Held back while we are returning from Stripe: that path refreshes first, then seeds this cache.
+  const statusQuery = useQuery({
+    queryKey: ['connect-status'],
+    queryFn: () => getConnectStatus<ConnectStatus>(),
+    enabled: !returnedFromStripe,
+    retry: false,
+  });
+  const refreshMutation = useMutation({
+    mutationFn: async () => {
+      await refreshConnectStatus();
+      return getConnectStatus<ConnectStatus>();
+    },
+    onSuccess: (status) => queryClient.setQueryData(['connect-status'], status),
+  });
+  const linkMutation = useMutation({ mutationFn: createConnectAccountLink });
+
+  const connectStatus = statusQuery.data ?? null;
+  const statusError = refreshError ?? (statusQuery.error ? getErrorMessage(statusQuery.error) : null);
+  const loading = statusQuery.isPending && !statusError;
+  const refreshing = refreshMutation.isPending;
+  const linking = linkMutation.isPending;
+  const { mutateAsync: refreshAsync } = refreshMutation;
 
   const refreshStatus = useCallback(async (showToast = true) => {
-    setRefreshing(true);
-    setStatusError(null);
+    setRefreshError(null);
     try {
-      await mainLink.post('/api/connect/refresh');
-      const status = await fetchStatus();
+      const status = await refreshAsync();
       if (showToast) {
         if (status.payoutReady) toast.success('Stripe Connect er klar for utbetalinger.');
         else toast('Stripe-statusen er oppdatert.');
       }
     } catch (error) {
-      setStatusError(getErrorMessage(error));
+      setRefreshError(getErrorMessage(error));
       if (showToast) toast.error(getErrorMessage(error));
-    } finally {
-      setRefreshing(false);
-      setLoading(false);
     }
-  }, [fetchStatus]);
+  }, [refreshAsync]);
 
   useEffect(() => {
+    if (!returnedFromStripe) return;
     let cancelled = false;
-    const params = new URLSearchParams(location.search);
-    const returnedFromStripe = params.has('success') || params.has('refresh');
-
-    const load = async () => {
-      setLoading(true);
-      try {
-        if (returnedFromStripe) {
-          await mainLink.post('/api/connect/refresh');
-        }
-        const response = await mainLink.get<ConnectStatus>('/api/connect/status');
+    refreshAsync()
+      .then((status) => {
         if (cancelled) return;
-        setConnectStatus(response.data);
-        setStatusError(null);
-        if (returnedFromStripe) {
-          if (response.data.payoutReady) toast.success('Stripe Connect er klar for utbetalinger.');
-          else toast('Stripe-statusen er oppdatert.');
-        }
-      } catch (error) {
-        if (!cancelled) setStatusError(getErrorMessage(error));
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-          if (returnedFromStripe) navigate('/settings/payout', { replace: true });
-        }
-      }
-    };
-
-    void load();
+        setRefreshError(null);
+        if (status.payoutReady) toast.success('Stripe Connect er klar for utbetalinger.');
+        else toast('Stripe-statusen er oppdatert.');
+      })
+      .catch((error) => {
+        if (!cancelled) setRefreshError(getErrorMessage(error));
+      })
+      .finally(() => {
+        if (!cancelled) navigate('/settings/payout', { replace: true });
+      });
     return () => {
       cancelled = true;
     };
-  }, [location.search, navigate]);
+  }, [returnedFromStripe, refreshAsync, navigate]);
 
   const handleAccountAction = async () => {
-    setLinking(true);
     setPlatformSetupRequired(false);
     try {
-      const response = await mainLink.post<{ url?: string }>('/api/connect/account-link');
-      if (!response.data?.url) {
+      const data = await linkMutation.mutateAsync();
+      if (!data?.url) {
         toast.error('Stripe returnerte ingen kontolenke. Prøv igjen.');
         return;
       }
-      window.location.assign(response.data.url);
+      window.location.assign(data.url);
     } catch (error) {
       if (
         typeof error === 'object' &&
@@ -198,8 +194,6 @@ export const PayoutSettingsView = () => {
         setPlatformSetupRequired(true);
       }
       toast.error(getErrorMessage(error));
-    } finally {
-      setLinking(false);
     }
   };
 

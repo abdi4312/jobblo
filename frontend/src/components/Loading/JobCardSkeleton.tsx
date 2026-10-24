@@ -19,5 +19,3 @@ export const JobCardSkeleton = () => (
     <div className="jb-skeleton mt-2.5 h-3 w-4/5 rounded" />
   </div>
 );
-
-export default JobCardSkeleton;

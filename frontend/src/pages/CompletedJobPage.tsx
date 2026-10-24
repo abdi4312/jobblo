@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -11,7 +11,10 @@ import {
   Star,
   ThumbsUp,
 } from 'lucide-react';
-import mainLink from '../api/mainURLs';
+import { useQuery } from '@tanstack/react-query';
+import { getCompletedOrderDetails } from '../api/orderAPI';
+import { getReviewByOrder } from '../api/reviewsAPI';
+import { getJobDetail } from '../features/jobDetail/jobApi';
 import { useUserStore } from '../stores/userStore';
 import SafePaySteps from '../components/SafePay/SafePaySteps';
 
@@ -29,8 +32,35 @@ export default function CompletedJobPage() {
   const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
 
-  const [data, setData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- was useState<any>; response shape is untyped
+  const { data, isPending: isLoading, isError } = useQuery<any>({
+    queryKey: ['completed-job', orderId, serviceIdParam],
+    enabled: !!orderId || !!serviceIdParam,
+    retry: false,
+    queryFn: async () => {
+      if (orderId) {
+        // Case 1: We have an order ID
+        const [details, review] = await Promise.all([
+          getCompletedOrderDetails(orderId),
+          getReviewByOrder(orderId).catch(() => null),
+        ]);
+        const reviewsData = Array.isArray(review) ? review : review ? [review] : [];
+        return { ...details, reviews: reviewsData };
+      }
+      // Case 2: We only have a service ID
+      return {
+        service: await getJobDetail(serviceIdParam!),
+        order: null,
+        customer: null,
+        provider: null,
+        payment: null,
+        chat: null,
+        transactions: [],
+        timeline: [],
+        reviews: [],
+      };
+    },
+  });
   const [activeTab, setActiveTab] = useState<
     'timeline' | 'chat' | 'payment' | 'images' | 'attachments'
   >('timeline');
@@ -47,43 +77,8 @@ export default function CompletedJobPage() {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        if (orderId) {
-          // Case 1: We have an order ID
-          const [response, reviewResponse] = await Promise.all([
-            mainLink.get(`/api/orders/${orderId}/completed-details`),
-            mainLink.get(`/api/orders/${orderId}/review`).catch(() => null),
-          ]);
-          const reviewsData = Array.isArray(reviewResponse?.data) ? reviewResponse.data : reviewResponse?.data ? [reviewResponse.data] : [];
-          setData({ ...response.data, reviews: reviewsData });
-        } else if (serviceIdParam) {
-          // Case 2: We only have a service ID
-          const serviceRes = await mainLink.get(`/api/services/${serviceIdParam}`);
-          setData({
-            service: serviceRes.data,
-            order: null,
-            customer: null,
-            provider: null,
-            payment: null,
-            chat: null,
-            transactions: [],
-            timeline: [],
-            reviews: [],
-          });
-        } else {
-          navigate(-1);
-        }
-      } catch (err) {
-        console.error('Failed to fetch completed job details:', err);
-        navigate(-1);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
-  }, [orderId, serviceIdParam, navigate]);
+    if ((!orderId && !serviceIdParam) || isError) navigate(-1);
+  }, [orderId, serviceIdParam, isError, navigate]);
 
   if (isLoading) {
     return (

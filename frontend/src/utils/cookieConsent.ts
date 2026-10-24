@@ -7,9 +7,9 @@
  * GDPR/ePrivacy that is consent after the fact.
  */
 
-export const CONSENT_KEY = 'cookie-consent';
+const CONSENT_KEY = 'cookie-consent';
 
-export type CookieConsent = 'accepted' | 'rejected' | null;
+type CookieConsent = 'accepted' | 'rejected' | null;
 
 export function getCookieConsent(): CookieConsent {
   try {
@@ -35,7 +35,7 @@ export function setCookieConsent(value: Exclude<CookieConsent, null>): void {
 let adsenseLoaded = false;
 
 /** Injects the AdSense tag. Only ever called after an explicit accept. */
-export function loadAdsense(): void {
+function loadAdsense(): void {
   if (adsenseLoaded || typeof document === 'undefined') return;
   const client = import.meta.env.VITE_ADSENSE_CLIENT as string | undefined;
   if (!client) return;

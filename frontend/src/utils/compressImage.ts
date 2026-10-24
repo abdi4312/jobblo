@@ -16,7 +16,7 @@
  * No new dependency: this is `createImageBitmap` + `<canvas>`.
  */
 
-export interface CompressImageOptions {
+interface CompressImageOptions {
   /** Longest edge of the output, in CSS pixels. */
   maxDimension?: number;
   /** Encoder quality, 0–1. */
@@ -104,7 +104,7 @@ const renameFor = (name: string, mimeType: string): string => {
  * file, no canvas, an encoder that produced something bigger — the original file is
  * returned, so a compression problem can never become an upload problem.
  */
-export async function compressImage(
+async function compressImage(
   file: File,
   options: CompressImageOptions = {}
 ): Promise<File> {

@@ -10,7 +10,7 @@
 
 import { customerOrderPath } from '../constants/statuses';
 
-export interface OrderRouteSubject {
+interface OrderRouteSubject {
   _id?: string;
   customerId?: unknown;
   providerId?: unknown;

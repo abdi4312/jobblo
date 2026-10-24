@@ -1,7 +1,7 @@
 import mainLink from './mainURLs';
 import type { ApiResponse } from '../types/admin';
 
-export interface PublicCampaign {
+interface PublicCampaign {
   id: string;
   name: string;
   startDate: string;
@@ -19,12 +19,12 @@ export interface PublicCampaign {
   termsUrl: string;
 }
 
-export interface CampaignAssignment {
+interface CampaignAssignment {
   variant: 'A' | 'B';
   token: string;
 }
 
-export interface PublicCampaignData {
+interface PublicCampaignData {
   campaign: PublicCampaign | null;
   assignment?: CampaignAssignment;
 }

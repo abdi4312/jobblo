@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Pagination } from '../../types/admin';
 import { cn } from '@/lib/utils';
-import { Button } from '../Ui/Button';
+import { Button } from '../developer/ui/button';
 
 interface AdminPaginationProps {
     pagination: Pagination;
@@ -30,9 +30,9 @@ export function AdminPagination({
             role="navigation"
             aria-label="Paginering"
         >
-            <p className="text-sm text-gray-500">
-                Viser <span className="font-semibold text-gray-700">{from}–{to}</span> av{' '}
-                <span className="font-semibold text-gray-700">{total}</span> resultater
+            <p className="text-sm text-muted-foreground">
+                Viser <span className="font-medium text-foreground">{from}–{to}</span> av{' '}
+                <span className="font-medium text-foreground">{total}</span> resultater
             </p>
 
             <div className="flex items-center gap-1.5">
@@ -41,7 +41,7 @@ export function AdminPagination({
                     size="icon"
                     onClick={() => onPageChange(page - 1)}
                     disabled={!hasPreviousPage}
-                    className="border-gray-200 text-gray-600 disabled:opacity-40"
+                    className="disabled:opacity-40"
                     aria-label="Forrige side"
                 >
                     <ChevronLeft size={16} />
@@ -66,8 +66,8 @@ export function AdminPagination({
                             className={cn(
                                 'min-w-[36px] h-9 px-3 rounded-lg text-sm font-medium',
                                 pageNum === page
-                                    ? 'bg-[#2d4a3e] text-white hover:bg-[#233b31]'
-                                    : 'border-gray-200 text-gray-600'
+                                    ? 'bg-primary text-white hover:bg-primary/90'
+                                    : 'border-border text-muted-foreground'
                             )}
                             aria-label={`Side ${pageNum}`}
                             aria-current={pageNum === page ? 'page' : undefined}
@@ -82,7 +82,7 @@ export function AdminPagination({
                     size="icon"
                     onClick={() => onPageChange(page + 1)}
                     disabled={!hasNextPage}
-                    className="border-gray-200 text-gray-600 disabled:opacity-40"
+                    className="disabled:opacity-40"
                     aria-label="Neste side"
                 >
                     <ChevronRight size={16} />

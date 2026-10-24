@@ -8,26 +8,15 @@ interface AdminPageHeaderProps {
     className?: string;
 }
 
-export function AdminPageHeader({
-    title,
-    description,
-    actions,
-    className,
-}: AdminPageHeaderProps) {
+/** Same as the Developer Console's PageHeader (components/developer/kit.tsx). */
+export function AdminPageHeader({ title, description, actions, className }: AdminPageHeaderProps) {
     return (
-        <div
-            className={cn(
-                'flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6',
-                className
-            )}
-        >
-            <div>
-                <h1 className="text-2xl font-black text-gray-900 tracking-tight">{title}</h1>
-                {description && (
-                    <p className="text-sm text-gray-500 mt-0.5">{description}</p>
-                )}
+        <div className={cn('mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center', className)}>
+            <div className="min-w-0">
+                <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
+                {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
             </div>
-            {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+            {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
         </div>
     );
 }

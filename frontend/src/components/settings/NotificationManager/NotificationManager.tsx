@@ -1,6 +1,5 @@
 import { toast } from 'react-hot-toast';
 import { getErrorMessage } from '../../../utils/getErrorMessage';
-import React from 'react';
 import { useUserStore } from '../../../stores/userStore';
 import { NotificationToggle } from '../NotificationToggle/NotificationToggle';
 import { Bell, Mail, Smartphone, Volume2 } from 'lucide-react';
@@ -49,7 +48,6 @@ export function NotificationManager() {
         console.log('Attempting to send notification...');
         const notification = new Notification('Test fra Jobblo', {
           body: 'Dette er et testvarsel for å se om bakgrunnsvarsler fungerer!',
-          // icon: "/logo192.png",
           requireInteraction: true, // Desktop par notification rukega jab tak click na ho
           silent: false,
         });

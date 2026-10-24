@@ -2,10 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getJobDetail, createChat, createStripeSession, getNearbyJobs } from './jobApi';
 import { fetchJobs } from '../jobsList/jobListingAPI';
 import {
-  getAllOrders,
   createJobRequest,
   getMyJobRequests,
-  updateJobRequestStatus,
 } from '../../api/orderAPI';
 import type { Jobs } from '../../types/Jobs';
 
@@ -14,14 +12,6 @@ export const useJobDetailQuery = (id: string) => {
     queryKey: ['jobDetail', id],
     queryFn: () => getJobDetail(id),
     enabled: !!id,
-  });
-};
-
-export const useAllOrdersQuery = (isAuthenticated: boolean) => {
-  return useQuery({
-    queryKey: ['orders'],
-    queryFn: getAllOrders,
-    enabled: isAuthenticated,
   });
 };
 
@@ -41,18 +31,6 @@ export const useCreateJobRequestMutation = () => {
       queryClient.invalidateQueries({ queryKey: ['jobRequests'] });
       queryClient.invalidateQueries({ queryKey: ['my-subscription'] });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
-    },
-  });
-};
-
-export const useUpdateJobRequestStatusMutation = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ requestId, status }: { requestId: string; status: string }) =>
-      updateJobRequestStatus(requestId, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['jobRequests'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 };
@@ -123,28 +101,6 @@ export const useRecommendedJobsQuery = (
       // Filter current job and take only first 6
       return jobs.filter((job: Jobs) => job._id !== currentJobId).slice(0, 6);
     },
-    staleTime: 1000 * 60 * 60 * 5, // 5 hours
-    gcTime: 1000 * 60 * 60 * 5,
-  });
-};
-
-export const useNearbyJobsQuery = (
-  coordinates: [number, number] | undefined,
-  currentJobId: string
-) => {
-  return useQuery({
-    queryKey: ['nearbyJobs', coordinates, currentJobId],
-    queryFn: async () => {
-      if (!coordinates || coordinates.length !== 2) return [];
-
-      const [longitude, latitude] = coordinates;
-      // getNearbyJobs(lat, lng, radius)
-      const data = await getNearbyJobs(latitude, longitude, 50000);
-
-      // Filter current job and take only first 6
-      return data.filter((job: Jobs) => job._id !== currentJobId).slice(0, 6);
-    },
-    enabled: !!coordinates && coordinates.length === 2,
     staleTime: 1000 * 60 * 60 * 5, // 5 hours
     gcTime: 1000 * 60 * 60 * 5,
   });

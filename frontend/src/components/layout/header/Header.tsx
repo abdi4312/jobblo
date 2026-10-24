@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useUserStore } from '../../../stores/userStore';
 import { toast } from 'react-hot-toast';
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { getMyChats } from '../../../api/chatAPI';
 import { initSocket } from '../../../socket/socket';
 import { Link, NavLink } from 'react-router-dom';
@@ -30,6 +31,7 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const { playMessageSound } = useNotificationSound();
+  const queryClient = useQueryClient();
 
   // Still read here for the mobile drawer's badge — the desktop bell has its own copy,
   // and react-query dedupes them onto one request. `useUnreadCount` takes no argument;
@@ -47,7 +49,9 @@ export default function Header() {
 
     const initializeChatState = async () => {
       try {
-        const chats = await getMyChats();
+        // Socket events re-run this, so it reads through the shared ['chats'] cache
+        // (same key as useChatQueries) instead of a private request.
+        const chats = await queryClient.fetchQuery({ queryKey: ['chats'], queryFn: getMyChats, staleTime: 0 });
         if (!Array.isArray(chats)) return;
 
         // 1. Calculate unread count
@@ -190,7 +194,7 @@ export default function Header() {
       }
       window.removeEventListener('chat-read', handleChatRead);
     };
-  }, [user?._id, playMessageSound]);
+  }, [user?._id, playMessageSound, queryClient]);
 
   const handleProtectedNavigation = (path: string) => {
     if (!user) {

@@ -1,15 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getFavorites, deleteFavorite, setFavorite, checkIsFavorited } from '../api';
-// import { toast } from "react-toastify";
+import { deleteFavorite, setFavorite, checkIsFavorited } from '../api';
 import toast from 'react-hot-toast';
-
-export function useFavorites() {
-  return useQuery({
-    queryKey: ['favorites'],
-    queryFn: getFavorites,
-    staleTime: 1000 * 60 * 5,
-  });
-}
 
 export const useFavoriteStatusQuery = (id: string, isAuth: boolean) => {
   return useQuery({

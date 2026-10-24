@@ -20,7 +20,7 @@ function CopyButton({ value }: { value: string }) {
     const [copied, setCopied] = useState(false);
     return (
         <button onClick={() => { copyToClipboard(value); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-            className="ml-1.5 text-gray-400 hover:text-gray-700 transition-colors" aria-label="Kopier">
+            className="ml-1.5 text-muted-foreground hover:text-foreground transition-colors" aria-label="Kopier">
             {copied ? <CheckCircle2 size={13} className="text-green-500" /> : <Copy size={13} />}
         </button>
     );
@@ -28,8 +28,8 @@ function CopyButton({ value }: { value: string }) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
     return (
-        <div className="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-sm">
-            <h3 className="mb-4 border-b border-gray-100 pb-3 text-sm font-semibold tracking-tight text-gray-900">{title}</h3>
+        <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+            <h3 className="mb-4 border-b border-border pb-3 text-sm font-semibold tracking-tight text-foreground">{title}</h3>
             {children}
         </div>
     );
@@ -37,10 +37,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Row({ label, value, badge, copy }: { label: string; value?: React.ReactNode; badge?: string; copy?: string }) {
     return (
-        <div className="flex items-start justify-between gap-4 border-b border-gray-50 py-2 last:border-0">
-            <span className="w-36 shrink-0 text-xs text-gray-500">{label}</span>
-            <span className="flex min-w-0 items-center gap-1 text-right text-sm text-gray-800">
-                {badge ? <AdminStatusBadge status={badge} /> : (value ?? <span className="text-gray-300">–</span>)}
+        <div className="flex items-start justify-between gap-4 border-b border-border py-2 last:border-0">
+            <span className="w-36 shrink-0 text-xs text-muted-foreground">{label}</span>
+            <span className="flex min-w-0 items-center gap-1 text-right text-sm text-foreground">
+                {badge ? <AdminStatusBadge status={badge} /> : (value ?? <span className="text-muted-foreground/60">–</span>)}
                 {copy && <CopyButton value={copy} />}
             </span>
         </div>
@@ -51,20 +51,20 @@ function UserCard({ user, role }: {
     user?: { _id?: string; name?: string; email?: string; avatarUrl?: string; verified?: boolean; accountStatus?: string; averageRating?: number; completedJobs?: number } | null;
     role: string;
 }) {
-    if (!user) return <p className="text-sm text-gray-400">Ikke tilgjengelig</p>;
+    if (!user) return <p className="text-sm text-muted-foreground">Ikke tilgjengelig</p>;
     return (
         <div className="flex items-start gap-3">
             <img src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name ?? 'U')}&background=2d4a3e&color=fff&size=48`}
                 alt={user.name} className="w-10 h-10 rounded-full object-cover shrink-0" />
             <div className="min-w-0 space-y-0.5">
-                <p className="text-sm font-semibold text-gray-800">{user.name}</p>
-                <p className="text-xs text-gray-400">{user.email}</p>
-                <p className="text-xs text-gray-400 capitalize">{role}</p>
+                <p className="text-sm font-semibold text-foreground">{user.name}</p>
+                <p className="text-xs text-muted-foreground">{user.email}</p>
+                <p className="text-xs text-muted-foreground capitalize">{role}</p>
                 <div className="flex items-center gap-2 mt-1">
                     {user.verified && <span className="text-xs text-green-600 font-medium">✓ Verifisert</span>}
                     {user.accountStatus && <AdminStatusBadge status={user.accountStatus} />}
                 </div>
-                <p className="text-xs text-gray-500">⭐ {user.averageRating?.toFixed(1) ?? '–'} · {user.completedJobs ?? 0} jobber</p>
+                <p className="text-xs text-muted-foreground">⭐ {user.averageRating?.toFixed(1) ?? '–'} · {user.completedJobs ?? 0} jobber</p>
             </div>
         </div>
     );
@@ -100,7 +100,7 @@ function ChatAccessPanel({ orderId, hasActiveDispute }: { orderId: string; hasAc
     if (!showForm && !submitted) {
         return (
             <button onClick={() => setShowForm(true)}
-                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors border border-gray-200">
+                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/50 hover:bg-accent rounded-md transition-colors border border-border">
                 <Lock size={13} />
                 {hasActiveDispute ? 'Se full chat (tvist åpen)' : 'Be om tilgang til full chat'}
             </button>
@@ -115,14 +115,14 @@ function ChatAccessPanel({ orderId, hasActiveDispute }: { orderId: string; hasAc
                 </p>
                 <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)}
                     placeholder="Grunn for tilgang (min. 5 tegn)…"
-                    className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 resize-none" />
+                    className="w-full px-3 py-2 text-xs border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50 resize-none" />
                 <div className="flex gap-2">
                     <button onClick={resetAccess}
-                        className="flex-1 py-2 text-xs font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
+                        className="flex-1 py-2 text-xs font-medium text-muted-foreground bg-muted hover:bg-accent rounded-md transition-colors">
                         Avbryt
                     </button>
                     <button onClick={handleSubmit} disabled={reason.trim().length < 5}
-                        className="flex-1 py-2 text-xs font-medium text-white bg-[#2d4a3e] hover:bg-[#233b31] rounded-xl transition-colors disabled:opacity-40">
+                        className="flex-1 py-2 text-xs font-medium text-white bg-primary hover:bg-primary/90 rounded-md transition-colors disabled:opacity-40">
                         Hent chat
                     </button>
                 </div>
@@ -133,7 +133,7 @@ function ChatAccessPanel({ orderId, hasActiveDispute }: { orderId: string; hasAc
     return (
         <div className="pt-2 space-y-2">
             {chatQuery.isLoading && (
-                <div className="flex items-center gap-2 text-xs text-gray-500 py-2">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
                     <Loader2 size={14} className="animate-spin" /> Laster chatthistorikk…
                 </div>
             )}
@@ -144,7 +144,7 @@ function ChatAccessPanel({ orderId, hasActiveDispute }: { orderId: string; hasAc
                             ?? 'Tilgang nektet. Krever aktiv tvist eller revisjonstillatelse.'}
                     </p>
                     <button onClick={resetAccess}
-                        className="text-xs text-gray-500 hover:text-gray-700 underline">Prøv igjen</button>
+                        className="text-xs text-muted-foreground hover:text-foreground underline">Prøv igjen</button>
                 </div>
             )}
             {chatQuery.data && (
@@ -157,27 +157,27 @@ function ChatAccessPanel({ orderId, hasActiveDispute }: { orderId: string; hasAc
 // ── Chat messages read-only view ──────────────────────────────────────────────
 function ChatMessagesView({ messages, onClose }: { messages: AdminChatMessage[]; onClose: () => void }) {
     return (
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-100">
+        <div className="border border-border rounded-md overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border">
                 <div className="flex items-center gap-2">
-                    <MessageSquare size={13} className="text-gray-400" />
-                    <span className="text-xs font-semibold text-gray-700">Chatthistorikk (skrivebeskyttet)</span>
+                    <MessageSquare size={13} className="text-muted-foreground" />
+                    <span className="text-xs font-semibold text-foreground">Chatthistorikk (skrivebeskyttet)</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full font-medium">Kun lesing</span>
-                    <button onClick={onClose} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Lukk</button>
+                    <button onClick={onClose} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Lukk</button>
                 </div>
             </div>
-            <div className="max-h-80 overflow-y-auto p-3 space-y-2 bg-white">
+            <div className="max-h-80 overflow-y-auto p-3 space-y-2 bg-card">
                 {messages.length === 0 ? (
-                    <p className="text-xs text-gray-400 text-center py-4">Ingen meldinger</p>
+                    <p className="text-xs text-muted-foreground text-center py-4">Ingen meldinger</p>
                 ) : (
                     messages.map((msg) => {
                         const isSystem = msg.type?.startsWith('system_');
                         if (isSystem) {
                             return (
                                 <div key={msg._id} className="text-center">
-                                    <span className="inline-block text-[10px] text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+                                    <span className="inline-block text-[10px] text-muted-foreground bg-muted/50 px-3 py-1 rounded-full border border-border">
                                         {msg.text ?? msg.type}
                                     </span>
                                 </div>
@@ -187,21 +187,21 @@ function ChatMessagesView({ messages, onClose }: { messages: AdminChatMessage[];
                         const senderRole = msg.sender?.role ?? '';
                         return (
                             <div key={msg._id} className="flex gap-2.5">
-                                <div className="w-6 h-6 rounded-full bg-gray-200 shrink-0 flex items-center justify-center text-[10px] font-bold text-gray-500 mt-0.5">
+                                <div className="w-6 h-6 rounded-full bg-muted shrink-0 flex items-center justify-center text-[10px] font-bold text-muted-foreground mt-0.5">
                                     {senderName[0]?.toUpperCase()}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1.5 mb-0.5">
-                                        <span className="text-xs font-semibold text-gray-700">{senderName}</span>
-                                        {senderRole && <span className="text-[10px] text-gray-400 capitalize">{senderRole}</span>}
-                                        <time className="text-[10px] text-gray-300 ml-auto">{new Date(msg.createdAt).toLocaleString('nb-NO')}</time>
+                                        <span className="text-xs font-semibold text-foreground">{senderName}</span>
+                                        {senderRole && <span className="text-[10px] text-muted-foreground capitalize">{senderRole}</span>}
+                                        <time className="text-[10px] text-muted-foreground/60 ml-auto">{new Date(msg.createdAt).toLocaleString('nb-NO')}</time>
                                     </div>
-                                    {msg.text && <p className="text-xs text-gray-700 leading-relaxed">{msg.text}</p>}
+                                    {msg.text && <p className="text-xs text-foreground leading-relaxed">{msg.text}</p>}
                                     {msg.attachments && msg.attachments.length > 0 && (
                                         <div className="flex gap-1 mt-1 flex-wrap">
                                             {msg.attachments.map((url, i) => (
                                                 <a key={i} href={url} target="_blank" rel="noopener noreferrer"
-                                                    className="flex items-center gap-1 text-[10px] text-[#2d4a3e] hover:underline">
+                                                    className="flex items-center gap-1 text-[10px] text-primary hover:underline">
                                                     <FileText size={10} /> Vedlegg {i + 1}
                                                     <ExternalLink size={9} />
                                                 </a>
@@ -280,7 +280,7 @@ export default function SafePayDetailPage() {
         <div className="space-y-6">
             {/* Back nav */}
             <div className="flex items-center gap-3">
-                <Link to="/dashboard/safepay" className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors">
+                <Link to="/dashboard/safepay" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
                     <ArrowLeft size={16} /> Tilbake til SafePay
                 </Link>
             </div>
@@ -290,14 +290,14 @@ export default function SafePayDetailPage() {
                 description={order.serviceId?.title ?? 'Ukjent tjeneste'}
                 actions={dispute ? (
                     <Link to={`/dashboard/disputes/${dispute._id}`}
-                        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors">
+                        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors">
                         <AlertTriangle size={15} /> Vis tvist
                     </Link>
                 ) : undefined}
             />
 
             {/* Status bar */}
-            <div className="flex flex-wrap gap-x-6 gap-y-3 rounded-2xl border border-gray-200/80 bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap gap-x-6 gap-y-3 rounded-lg border border-border bg-card p-4 shadow-sm">
                 {([
                     { label: 'Ordre', value: order.status },
                     { label: 'Betaling', value: order.paymentStatus },
@@ -306,7 +306,7 @@ export default function SafePayDetailPage() {
                 ] as { label: string; value?: string }[]).map(({ label, value }) =>
                     value ? (
                         <div key={label} className="flex items-center gap-2">
-                            <span className="text-xs text-gray-400">{label}:</span>
+                            <span className="text-xs text-muted-foreground">{label}:</span>
                             <AdminStatusBadge status={value} />
                         </div>
                     ) : null
@@ -417,18 +417,18 @@ export default function SafePayDetailPage() {
                             <AdminEmptyState title="Ingen sjekkliste" description="Ingen sjekklistepunkter." className="py-4" />
                         ) : (
                             <div className="space-y-2">
-                                <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-3">
-                                    <div className="h-full bg-[#2d4a3e] rounded-full transition-all" style={{ width: `${checklistPct}%` }} />
+                                <div className="h-2 bg-muted rounded-full overflow-hidden mb-3">
+                                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${checklistPct}%` }} />
                                 </div>
                                 {checklist.map((item) => (
                                     <div key={item.id} className="flex items-start gap-2.5 py-1.5">
-                                        <div className={`w-4 h-4 rounded border shrink-0 mt-0.5 flex items-center justify-center ${item.checked ? 'bg-[#2d4a3e] border-[#2d4a3e]' : 'border-gray-300'}`}>
+                                        <div className={`w-4 h-4 rounded border shrink-0 mt-0.5 flex items-center justify-center ${item.checked ? 'bg-primary border-primary' : 'border-border'}`}>
                                             {item.checked && <CheckCircle2 size={12} className="text-white" />}
                                         </div>
                                         <div className="min-w-0">
-                                            <p className={`text-sm ${item.checked ? 'text-gray-500 line-through' : 'text-gray-800'}`}>{item.text}</p>
+                                            <p className={`text-sm ${item.checked ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{item.text}</p>
                                             {item.checked && item.checkedBy && (
-                                                <p className="text-xs text-gray-400">
+                                                <p className="text-xs text-muted-foreground">
                                                     {item.checkedBy.name}{item.checkedAt ? ` · ${new Date(item.checkedAt).toLocaleDateString('nb-NO')}` : ''}
                                                 </p>
                                             )}
@@ -444,11 +444,11 @@ export default function SafePayDetailPage() {
                         <Section title="Filer og bilder">
                             {order.beforeImages && order.beforeImages.length > 0 && (
                                 <div className="mb-3">
-                                    <p className="text-xs font-medium text-gray-500 mb-2">Før</p>
+                                    <p className="text-xs font-medium text-muted-foreground mb-2">Før</p>
                                     <div className="flex flex-wrap gap-2">
                                         {order.beforeImages.map((url, i) => (
                                             <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                                                <img src={url} alt={`Før ${i + 1}`} className="w-16 h-16 object-cover rounded-lg border border-gray-100" />
+                                                <img src={url} alt={`Før ${i + 1}`} className="w-16 h-16 object-cover rounded-lg border border-border" />
                                             </a>
                                         ))}
                                     </div>
@@ -456,11 +456,11 @@ export default function SafePayDetailPage() {
                             )}
                             {order.afterImages && order.afterImages.length > 0 && (
                                 <div className="mb-3">
-                                    <p className="text-xs font-medium text-gray-500 mb-2">Etter</p>
+                                    <p className="text-xs font-medium text-muted-foreground mb-2">Etter</p>
                                     <div className="flex flex-wrap gap-2">
                                         {order.afterImages.map((url, i) => (
                                             <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                                                <img src={url} alt={`Etter ${i + 1}`} className="w-16 h-16 object-cover rounded-lg border border-gray-100" />
+                                                <img src={url} alt={`Etter ${i + 1}`} className="w-16 h-16 object-cover rounded-lg border border-border" />
                                             </a>
                                         ))}
                                     </div>
@@ -468,10 +468,10 @@ export default function SafePayDetailPage() {
                             )}
                             {order.attachments && order.attachments.length > 0 && (
                                 <div>
-                                    <p className="text-xs font-medium text-gray-500 mb-2">Vedlegg</p>
+                                    <p className="text-xs font-medium text-muted-foreground mb-2">Vedlegg</p>
                                     {order.attachments.map((url, i) => (
                                         <a key={i} href={url} target="_blank" rel="noopener noreferrer"
-                                            className="flex items-center gap-2 text-xs text-[#2d4a3e] hover:underline mb-1">
+                                            className="flex items-center gap-2 text-xs text-primary hover:underline mb-1">
                                             <FileText size={13} /> Vedlegg {i + 1} <ExternalLink size={11} />
                                         </a>
                                     ))}
@@ -515,7 +515,7 @@ export default function SafePayDetailPage() {
                             <Row label="Prioritet" value={dispute.priority} />
                             <div className="pt-2">
                                 <Link to={`/dashboard/disputes/${dispute._id}`}
-                                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors">
+                                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors">
                                     <AlertTriangle size={13} /> Administrer tvist
                                 </Link>
                             </div>
@@ -530,20 +530,20 @@ export default function SafePayDetailPage() {
                             <AdminEmptyState title="Ingen hendelser" description="Ingen loggede hendelser ennå." className="py-4" />
                         ) : (
                             <div className="relative">
-                                <div className="absolute left-3 top-0 bottom-0 w-px bg-gray-100" aria-hidden="true" />
+                                <div className="absolute left-3 top-0 bottom-0 w-px bg-muted" aria-hidden="true" />
                                 <div className="space-y-3 pl-8">
                                     {timeline.map((event, i) => (
                                         <div key={i} className="relative">
-                                            <div className="absolute -left-5 w-2.5 h-2.5 rounded-full bg-gray-300 border-2 border-white mt-1" aria-hidden="true" />
+                                            <div className="absolute -left-5 w-2.5 h-2.5 rounded-full bg-muted-foreground/30 border-2 border-white mt-1" aria-hidden="true" />
                                             <div>
                                                 <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${SOURCE_COLORS[event.source] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${SOURCE_COLORS[event.source] ?? 'bg-muted text-muted-foreground'}`}>
                                                         {event.source}
                                                     </span>
-                                                    <span className="text-xs font-medium text-gray-700">{event.action.replace(/_/g, ' ')}</span>
+                                                    <span className="text-xs font-medium text-foreground">{event.action.replace(/_/g, ' ')}</span>
                                                 </div>
-                                                <p className="text-xs text-gray-500 mt-0.5">{event.description}</p>
-                                                <time className="text-[10px] text-gray-300">{new Date(event.timestamp).toLocaleString('nb-NO')}</time>
+                                                <p className="text-xs text-muted-foreground mt-0.5">{event.description}</p>
+                                                <time className="text-[10px] text-muted-foreground/60">{new Date(event.timestamp).toLocaleString('nb-NO')}</time>
                                             </div>
                                         </div>
                                     ))}

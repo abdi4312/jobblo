@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Users, UserPlus, Calendar, Plus, Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAdminUsers, useCreateAdminUser, useChangeUserRole, useVerifyUser, useUpdateUserStatus } from '../../hooks/admin';
 import { AdminDataTable, AdminSearchInput, AdminFilterSelect, AdminStatusBadge, AdminConfirmDialog, AdminPageHeader, AdminStatCard } from '../../components/admin';
 import type { AdminUser } from '../../types/admin';
@@ -12,6 +13,7 @@ const ROLE_OPTIONS = [
   { label: 'Tilbyder', value: 'provider' },
   { label: 'Bedrift', value: 'company' },
   { label: 'Super Admin', value: 'superAdmin' },
+  { label: 'Utvikler', value: 'developer' },
 ];
 // Role change options — same set as create
 const CHANGE_ROLE_OPTIONS = ROLE_OPTIONS;
@@ -20,6 +22,7 @@ const ROLE_FILTER_OPTIONS = [
   { label: 'Tilbyder', value: 'provider' },
   { label: 'Bedrift', value: 'company' },
   { label: 'Super Admin', value: 'superAdmin' },
+  { label: 'Utvikler', value: 'developer' },
 ];
 const STATUS_OPTIONS = [
   { label: 'Aktiv', value: 'active' },
@@ -75,20 +78,20 @@ export default function UsersPage() {
       key: 'user',
       header: 'Bruker',
       render: (u) => (
-        <div className="flex items-center gap-2.5 min-w-0">
+        <Link to={`/dashboard/users/${u._id}`} className="group flex min-w-0 items-center gap-2.5">
           <img
             src={
               u.avatarUrl ||
-              `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=2d4a3e&color=fff&size=40`
+              `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=e8edfb&color=3b5bdb&size=40`
             }
             alt={u.name}
             className="w-8 h-8 rounded-full object-cover shrink-0"
           />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-800 truncate">{u.name}</p>
-            <p className="text-xs text-gray-400 truncate">{u.email}</p>
+            <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary group-hover:underline">{u.name}</p>
+            <p className="text-xs text-muted-foreground truncate">{u.email}</p>
           </div>
-        </div>
+        </Link>
       ),
     },
     {
@@ -105,7 +108,7 @@ export default function UsersPage() {
       key: 'verified',
       header: 'Verifisert',
       render: (u) => (
-        <span className={`text-xs font-medium ${u.verified ? 'text-green-600' : 'text-gray-400'}`}>
+        <span className={`text-xs font-medium ${u.verified ? 'text-green-600' : 'text-muted-foreground'}`}>
           {u.verified ? 'Ja' : 'Nei'}
         </span>
       ),
@@ -146,7 +149,7 @@ export default function UsersPage() {
                 className={`px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${
                   u.accountStatus === 'active'
                     ? 'text-red-600 bg-red-50 hover:bg-red-100'
-                    : 'text-gray-600 bg-gray-100 hover:bg-gray-200'
+                    : 'text-muted-foreground bg-muted hover:bg-accent'
                 }`}
                 aria-label={`${u.accountStatus === 'active' ? 'Deaktiver' : 'Aktiver'} ${u.name}`}
               >
@@ -163,7 +166,7 @@ export default function UsersPage() {
                     setRoleTarget({ user: u, newRole });
                   }
                 }}
-                className="px-2 py-1.5 text-xs font-medium border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50"
+                className="px-2 py-1.5 text-xs font-medium border border-border rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-ring/50"
                 aria-label={`Endre rolle for ${u.name}`}
               >
                 {CHANGE_ROLE_OPTIONS.map((r) => (
@@ -218,7 +221,7 @@ export default function UsersPage() {
         actions={
           <button
             onClick={() => setCreateOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#2d4a3e] hover:bg-[#233b31] rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary/90 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-ring/50"
           >
             <Plus size={16} />
             Ny bruker
@@ -291,14 +294,14 @@ export default function UsersPage() {
           aria-modal="true"
           aria-labelledby="create-user-title"
         >
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
-            <h2 id="create-user-title" className="text-lg font-bold text-gray-900">
+          <div className="bg-card rounded-lg shadow-xl w-full max-w-md p-6 space-y-4">
+            <h2 id="create-user-title" className="text-lg font-bold text-foreground">
               Opprett ny bruker
             </h2>
 
             {(['name', 'email', 'phone', 'password'] as const).map((field) => (
               <div key={field}>
-                <label htmlFor={`create-${field}`} className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                <label htmlFor={`create-${field}`} className="block text-sm font-medium text-foreground mb-1 capitalize">
                   {field === 'name' ? 'Navn *' : field === 'email' ? 'E-post *' : field === 'phone' ? 'Telefon' : 'Passord *'}
                 </label>
                 <input
@@ -306,7 +309,7 @@ export default function UsersPage() {
                   type={field === 'password' ? 'password' : field === 'email' ? 'email' : 'text'}
                   value={form[field]}
                   onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 focus:border-[#2d4a3e]"
+                  className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
                   aria-describedby={formErrors[field] ? `err-${field}` : undefined}
                   aria-invalid={!!formErrors[field]}
                 />
@@ -317,14 +320,14 @@ export default function UsersPage() {
             ))}
 
             <div>
-              <label htmlFor="create-role" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="create-role" className="block text-sm font-medium text-foreground mb-1">
                 Rolle *
               </label>
               <select
                 id="create-role"
                 value={form.role}
                 onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50"
+                className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50"
               >
                 {ROLE_OPTIONS.map((r) => (
                   <option key={r.value} value={r.value}>{r.label}</option>
@@ -335,14 +338,14 @@ export default function UsersPage() {
             <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={() => { setCreateOpen(false); setFormErrors({}); }}
-                className="px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                className="px-4 py-2.5 text-sm font-medium text-muted-foreground bg-muted hover:bg-accent rounded-md transition-colors"
               >
                 Avbryt
               </button>
               <button
                 onClick={handleCreate}
                 disabled={createMutation.isPending}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#2d4a3e] hover:bg-[#233b31] rounded-xl transition-colors disabled:opacity-60"
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary/90 rounded-md transition-colors disabled:opacity-60"
               >
                 {createMutation.isPending && <Loader2 size={14} className="animate-spin" />}
                 Opprett bruker

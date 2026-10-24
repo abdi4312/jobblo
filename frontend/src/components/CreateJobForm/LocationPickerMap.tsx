@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Map, Marker, useMap } from '@vis.gl/react-google-maps';
 import { Locate, Loader2, MapPin, Crosshair } from 'lucide-react';
 import { reverseGeocode, type ReverseGeocodeResult } from '../../utils/reverseGeocode';
@@ -195,5 +195,3 @@ function PanToMap({
   }, [map, target, version]);
   return null;
 }
-
-export default LocationPickerMap;

@@ -14,7 +14,7 @@ export function ChatIdCell({ chatId, reviewSource = 'safepay', reportId }: ChatI
     const [copied, setCopied] = useState(false);
 
     if (!chatId) {
-        return <span className="text-xs text-gray-400 italic">Ingen tilknyttet chat</span>;
+        return <span className="text-xs text-muted-foreground italic">Ingen tilknyttet chat</span>;
     }
 
     const truncated = `${chatId.slice(0, 8)}…${chatId.slice(-4)}`;
@@ -34,12 +34,12 @@ export function ChatIdCell({ chatId, reviewSource = 'safepay', reportId }: ChatI
 
     return (
         <div className="flex items-center gap-1.5">
-            <span className="font-mono text-xs text-gray-600 select-all" title={chatId}>
+            <span className="font-mono text-xs text-muted-foreground select-all" title={chatId}>
                 {truncated}
             </span>
             <button
                 onClick={handleCopy}
-                className="p-0.5 rounded text-gray-400 hover:text-gray-700 transition-colors"
+                className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
                 aria-label="Kopier Chat ID"
                 title="Kopier Chat ID"
             >
@@ -51,7 +51,7 @@ export function ChatIdCell({ chatId, reviewSource = 'safepay', reportId }: ChatI
             </button>
             <Link
                 to={reviewUrl}
-                className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium text-[#2d4a3e] bg-[#eef5f2] hover:bg-[#d7ece4] rounded transition-colors"
+                className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium text-primary bg-primary/10 hover:bg-primary/15 rounded transition-colors"
                 title="Gjennomgå chat"
             >
                 <MessageSquare size={10} aria-hidden="true" />

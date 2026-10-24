@@ -1,11 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '../Ui/button/Button';
-import { Bookmark, MessageCircle, AlertCircle } from 'lucide-react';
+import { MessageCircle, AlertCircle } from 'lucide-react';
 import { Spinner } from '../Ui/Spinner';
-import { useUserStore } from '../../stores/userStore';
-import AddToListModal from '../Explore/jobs/AddToListModal';
-import { useNavigate } from 'react-router-dom';
-import { useFavoriteLists } from '../../features/favoriteLists/hooks';
 import type { Jobs } from '../../types/Jobs';
 
 interface JobButtonProps {
@@ -22,7 +18,6 @@ interface JobButtonProps {
 }
 
 const JobButton: React.FC<JobButtonProps> = ({
-  id,
   handleSendMessage,
   isOwnJob,
   isMsgLoading,
@@ -31,25 +26,6 @@ const JobButton: React.FC<JobButtonProps> = ({
   isTimerActive,
   wasDeclined,
 }) => {
-  const isAuth = useUserStore((state) => state.isAuthenticated);
-  const navigate = useNavigate();
-  const { data: lists = [], isLoading } = useFavoriteLists();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Check if job is in ANY of the user's lists
-  const isInAnyList = lists.some((list) =>
-    list.services?.some((s) => (typeof s === 'string' ? s === id : s._id === id))
-  );
-
-  const handleHeartClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isAuth) {
-      navigate('/login');
-      return;
-    }
-    setIsModalOpen(true);
-  };
-
   const isLimitReached = job?.isLimitReached;
 
   return (
@@ -96,24 +72,7 @@ const JobButton: React.FC<JobButtonProps> = ({
                         } 
                     `}
         />
-
-        {/* Lagre / Save Button */}
-        {/* <Button
-                    onClick={handleHeartClick}
-                    disabled={isLoading}
-                    label={isInAnyList ? 'Lagret' : 'Lagre'}
-                    icon={<Bookmark size={18} fill={isInAnyList ? 'currentColor' : 'none'} />}
-                    className={`h-12 px-5 border rounded-xl text-[14px]! font-semibold! transition-all! whitespace-nowrap
-                        ${isInAnyList
-                            ? 'bg-[#F0B100]! border-[#F0B100]! text-white!'
-                            : 'bg-transparent! text-custom-green! border-custom-green! hover:bg-custom-green! hover:text-white!'}
-                    `}
-                /> */}
       </div>
-
-      {job && (
-        <AddToListModal job={job} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-      )}
     </div>
   );
 };

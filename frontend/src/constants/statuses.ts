@@ -14,7 +14,7 @@
  */
 
 /** Service statuses that mean nobody can apply any more. */
-export const CLOSED_SERVICE_STATUSES = [
+const CLOSED_SERVICE_STATUSES = [
   'completed',
   'in_progress',
   'closed',
@@ -28,29 +28,12 @@ export const CLOSED_SERVICE_STATUSES = [
 ] as const;
 
 /** Order statuses that mean the customer's money has already been taken. */
-export const PAID_ORDER_STATUSES = [
+const PAID_ORDER_STATUSES = [
   'paid',
   'in_progress',
   'ready_for_review',
   'waiting_for_approval',
   'completed',
-] as const;
-
-/**
- * Order statuses that mean this job already has a live contract, so the poster
- * must not be offered "Velg og start SafePay" again. `ready_for_review` and
- * `disputed` were missing, so the moment a provider marked work ready the
- * applicants page re-armed the button and clicking it returned
- * "Kontrakt finnes allerede" with no way forward.
- */
-export const ACTIVE_ORDER_STATUSES = [
-  'awaiting_payment',
-  'paid',
-  'in_progress',
-  'ready_for_review',
-  'waiting_for_approval',
-  'completed',
-  'disputed',
 ] as const;
 
 /**
@@ -63,7 +46,7 @@ export const ACTIVE_ORDER_STATUSES = [
  * — before the provider had started, let alone pressed "Meld jobb som ferdig" —
  * and handed an approve button the server would reject.
  */
-export const APPROVABLE_ORDER_STATUSES = ['ready_for_review', 'completed'] as const;
+const APPROVABLE_ORDER_STATUSES = ['ready_for_review', 'completed'] as const;
 
 /** True once the provider has actually reported the work finished. */
 export const isApprovable = (status?: string | null): boolean =>
@@ -82,7 +65,7 @@ export const customerOrderPath = (orderId: string, status?: string | null): stri
 };
 
 /** Norwegian labels. Anything missing here would otherwise be shown raw. */
-export const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABELS: Record<string, string> = {
   open: 'Åpent',
   active: 'Aktivt',
   pending: 'Venter',
@@ -108,5 +91,5 @@ export const statusLabel = (status?: string | null): string =>
 export const isClosedService = (status?: string | null): boolean =>
   !!status && (CLOSED_SERVICE_STATUSES as readonly string[]).includes(status);
 
-export const isPaidOrder = (status?: string | null): boolean =>
+const isPaidOrder = (status?: string | null): boolean =>
   !!status && (PAID_ORDER_STATUSES as readonly string[]).includes(status);

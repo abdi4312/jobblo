@@ -1,6 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import type { SettingsContextType } from '../../../pages/SettingsPage';
-import { Camera, Image as ImageIcon, Plus, X } from 'lucide-react';
+import { Image as ImageIcon, Plus, X } from 'lucide-react';
 import { Input } from '../../Ui/Input';
 import { useState } from 'react';
 import { DEFAULT_BANNER } from '../../../constants/assets';

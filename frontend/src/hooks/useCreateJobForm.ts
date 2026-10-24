@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { analyzeJobImage, generateFullJobListing } from '../api/aiAPI';
+import { useMutation } from '@tanstack/react-query';
+import { analyzeJobImage, generateFullJobListing, type AISmartFillContext } from '../api/aiAPI';
 import { useTranslate } from '../i18n/useTranslate';
 import { useUserStore } from '../stores/userStore';
 import { usePaymentCalculation } from './usePaymentCalculation';
@@ -16,7 +17,7 @@ import { scrollToFirstError } from '../utils/scrollToError';
  * in their own state (images, the map pin, fylke, kommune) but reported through the same
  * error channel so the UI has one thing to read and `scrollToFirstError` one thing to find.
  */
-export type JobFormErrors = Partial<
+type JobFormErrors = Partial<
   Record<keyof JobFormValues | 'images' | 'coordinates' | 'countyCode' | 'municipalityCode', string>
 >;
 
@@ -184,6 +185,12 @@ export const useCreateJobForm = (
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [isGeneratingFullListing, setIsGeneratingFullListing] = useState(false);
+  const analyzeImageMutation = useMutation({
+    mutationFn: ({ file, lang }: { file: File; lang?: 'no' | 'en' }) => analyzeJobImage(file, lang),
+  });
+  const smartFillMutation = useMutation({
+    mutationFn: ({ prompt, ctx }: { prompt: string; ctx: AISmartFillContext }) => generateFullJobListing(prompt, ctx),
+  });
   const [smartFillSuggestionFlags, setSmartFillSuggestionFlags] = useState<{
     title?: boolean;
     description?: boolean;
@@ -277,7 +284,7 @@ export const useCreateJobForm = (
     if (!file) return;
     setImageAnalysis({ status: 'loading' });
     try {
-      const response = await analyzeJobImage(file, locale);
+      const response = await analyzeImageMutation.mutateAsync({ file, lang: locale });
       if (!response.success || !response.data) throw new Error(response.message || response.error);
       const suggestion = response.data;
       setTitle(suggestion.title);
@@ -323,7 +330,7 @@ export const useCreateJobForm = (
     setIsGeneratingFullListing(true);
     const newFlags: typeof smartFillSuggestionFlags = { ...smartFillSuggestionFlags };
     try {
-      const response = await generateFullJobListing(smartFillPrompt, {
+      const response = await smartFillMutation.mutateAsync({ prompt: smartFillPrompt, ctx: {
         lang: locale,
         existingTitle: values.title || undefined,
         existingDescription: values.description || undefined,
@@ -341,7 +348,7 @@ export const useCreateJobForm = (
         existingCounty: countyCode || undefined,
         existingEquipment: equipment || undefined,
         existingUrgent: urgent,
-      });
+      } });
 
       if (response.success) {
         const {

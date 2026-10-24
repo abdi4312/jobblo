@@ -21,7 +21,7 @@ export function ChatIdSearchForm({ onSearch, defaultValue = '', loading = false 
             <div className="relative flex-1">
                 <Search
                     size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
                     aria-hidden="true"
                 />
                 <input
@@ -30,7 +30,7 @@ export function ChatIdSearchForm({ onSearch, defaultValue = '', loading = false 
                     onChange={(e) => setValue(e.target.value)}
                     placeholder="Skriv inn Chat ID (24-tegns MongoDB ObjectId)…"
                     aria-label="Chat ID"
-                    className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 bg-white"
+                    className="w-full pl-9 pr-4 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50 bg-card"
                     autoComplete="off"
                     spellCheck={false}
                 />
@@ -38,7 +38,7 @@ export function ChatIdSearchForm({ onSearch, defaultValue = '', loading = false 
             <button
                 type="submit"
                 disabled={value.trim().length === 0 || loading}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#2d4a3e] hover:bg-[#233b31] rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary/90 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
             >
                 {loading ? (
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />

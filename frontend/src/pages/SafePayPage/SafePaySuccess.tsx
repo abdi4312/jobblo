@@ -3,8 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle2, ShieldCheck, Briefcase, AlertCircle, Loader2 } from 'lucide-react';
 import SafePaySteps from '../../components/SafePay/SafePaySteps';
 import { toast } from 'react-hot-toast';
-import { useQuery } from '@tanstack/react-query';
-import mainLink from '../../api/mainURLs';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { getCheckoutDetails, getCheckoutStatus, reconcileOrderPayment } from '../../api/safePayAPI';
 import { useUserStore } from '../../stores/userStore';
 import { CARD, MICRO_LABEL } from '../../theme/brand';
 
@@ -33,10 +33,7 @@ const SafePaySuccess: React.FC = () => {
     isRefetching: isRefetchingStatus,
   } = useQuery({
     queryKey: ['safepay-status', sessionId],
-    queryFn: async () => {
-      const res = await mainLink.get(`/api/safepay-checkout/status/${sessionId}`);
-      return res.data;
-    },
+    queryFn: () => getCheckoutStatus(sessionId!),
     enabled: !!sessionId,
   });
 
@@ -50,20 +47,18 @@ const SafePaySuccess: React.FC = () => {
     refetch: refetchOrder,
   } = useQuery({
     queryKey: ['safepay-checkout', orderId],
-    queryFn: async () => {
-      const res = await mainLink.get(`/api/safepay-checkout/details/${orderId}`);
-      return res.data;
-    },
+    queryFn: () => getCheckoutDetails(orderId!),
     enabled: !!orderId,
   });
 
   const order = checkoutData?.order;
   const serviceId = order?.serviceId?._id;
 
+  const reconcileMutation = useMutation({ mutationFn: reconcileOrderPayment });
   const reconcileAndRefresh = async () => {
     if (orderId) {
       try {
-        await mainLink.post(`/api/safepay/orders/${orderId}/reconcile-payment`);
+        await reconcileMutation.mutateAsync(orderId);
       } catch {
         // A failed reconciliation is not payment confirmation; refresh the DB view.
       }

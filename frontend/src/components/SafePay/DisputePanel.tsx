@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Send, ShieldAlert } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import mainLink from '../../api/mainURLs';
+import { postDisputeMessage } from '../../api/safePayAPI';
 import type { Dispute } from '../../features/disputes/hooks';
 import { getErrorMessage } from '../../utils/getErrorMessage';
 import { dateFormatter } from '../../utils/dateFormatter';
@@ -24,8 +24,7 @@ export const DisputePanel: React.FC<DisputePanelProps> = ({ orderId, dispute, vi
   const queryClient = useQueryClient();
 
   const addMessage = useMutation({
-    mutationFn: async (text: string) =>
-      mainLink.post(`/api/safepay/disputes/${dispute?._id}/message`, { message: text }),
+    mutationFn: (text: string) => postDisputeMessage(dispute?._id, text),
     onSuccess: () => {
       setMessage('');
       queryClient.invalidateQueries({ queryKey: ['dispute', orderId] });
@@ -154,5 +153,3 @@ export const DisputePanel: React.FC<DisputePanelProps> = ({ orderId, dispute, vi
     </div>
   );
 };
-
-export default DisputePanel;

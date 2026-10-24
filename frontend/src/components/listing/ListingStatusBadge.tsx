@@ -83,5 +83,3 @@ export const ListingStatusBadge = ({ status, className = '' }: ListingStatusBadg
     </span>
   );
 };
-
-export default ListingStatusBadge;

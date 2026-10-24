@@ -525,5 +525,3 @@ export function EditProfileSheet({
     </div>
   );
 }
-
-export default EditProfileSheet;

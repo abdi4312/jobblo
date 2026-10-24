@@ -1,8 +1,13 @@
 import Lottie from 'lottie-react';
 import notFoundAnimation from '../../assets/animations/Page Not Found 404.json';
-import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { reportProblem } from '../../lib/rum';
 
 export default function NotFound() {
+  const { pathname } = useLocation();
+  // A dead link somewhere led here: report it (with the trail of how) to session diagnostics.
+  useEffect(() => reportProblem('not_found', `No page at ${pathname}`), [pathname]);
   return (
     <main className="min-h-screen flex items-center justify-center">
       <div className="max-w-xl text-center">

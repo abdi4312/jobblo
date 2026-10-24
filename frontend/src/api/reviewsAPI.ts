@@ -1,29 +1,5 @@
 import mainLink from './mainURLs.ts';
 
-export interface Review {
-  _id: string;
-  serviceId: string;
-  reviewerId: string;
-  rating: number;
-  comment: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ReviewsResponse {
-  reviews: Review[];
-  stats: {
-    averageRating: number;
-    totalReviews: number;
-  };
-}
-
-export async function getUserReviews(userId: string) {
-  const res = await mainLink.get(`/api/reviews/user/${userId}`);
-
-  return res.data;
-}
-
 export async function createReview(data: {
   orderId: string;
   serviceId?: string;
@@ -36,7 +12,7 @@ export async function createReview(data: {
   return res.data;
 }
 
-export async function getReviewByOrder(orderId: string, role: 'seeker' | 'poster') {
+export async function getReviewByOrder(orderId: string, role?: 'seeker' | 'poster') {
   const res = await mainLink.get(`/api/orders/${orderId}/review`, {
     params: { role },
   });

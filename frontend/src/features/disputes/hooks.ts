@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import mainLink from '../../api/mainURLs';
+import { getOrderDispute } from '../../api/safePayAPI';
 
 export interface DisputeMessage {
   _id?: string;
@@ -34,8 +34,8 @@ export const useDispute = (orderId?: string) =>
     retry: false,
     queryFn: async () => {
       try {
-        const res = await mainLink.get(`/api/safepay/contract/${orderId}/dispute`);
-        return res.data?.dispute ?? null;
+        const data = await getOrderDispute(orderId!);
+        return data?.dispute ?? null;
       } catch (err) {
         // 404 is the ordinary "no dispute on this order" answer, not a failure.
         const status = (err as { response?: { status?: number } })?.response?.status;

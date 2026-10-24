@@ -20,7 +20,13 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import mainLink from '../../api/mainURLs';
+import {
+  approveCheckout,
+  getCheckoutDetails,
+  openOrderDispute,
+  updateCheckoutChecklistItem,
+  uploadReviewPhotos,
+} from '../../api/safePayAPI';
 import { toast } from 'react-hot-toast';
 import { Button } from '../../components/Ui/button/Button';
 import SafePaySteps from '../../components/SafePay/SafePaySteps';
@@ -304,7 +310,11 @@ const SafePayApproval: React.FC = () => {
     title: false,
     description: false,
   });
-  const [disputeSubmitting, setDisputeSubmitting] = useState(false);
+  const openDisputeMutation = useMutation({
+    mutationFn: (payload: { reasonCategory: string; title: string; description: string }) =>
+      openOrderDispute(orderId!, payload),
+  });
+  const disputeSubmitting = openDisputeMutation.isPending;
 
   // Validation rules
   const disputeErrors = {
@@ -335,9 +345,8 @@ const SafePayApproval: React.FC = () => {
   const handleOpenDispute = async () => {
     setDisputeTouched({ reasonCategory: true, title: true, description: true });
     if (!disputeIsValid) return;
-    setDisputeSubmitting(true);
     try {
-      await mainLink.post(`/api/safepay/contract/${orderId}/dispute`, {
+      await openDisputeMutation.mutateAsync({
         reasonCategory: disputeForm.reasonCategory,
         title: disputeForm.title.trim(),
         description: disputeForm.description.trim(),
@@ -352,8 +361,6 @@ const SafePayApproval: React.FC = () => {
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         'Noe gikk galt. Prøv igjen.';
       toast.error(msg);
-    } finally {
-      setDisputeSubmitting(false);
     }
   };
 
@@ -379,10 +386,7 @@ const SafePayApproval: React.FC = () => {
     refetch,
   } = useQuery({
     queryKey: ['safepay-checkout', orderId],
-    queryFn: async () => {
-      const res = await mainLink.get(`/api/safepay-checkout/details/${orderId}`);
-      return res.data;
-    },
+    queryFn: () => getCheckoutDetails(orderId!),
     enabled: !!orderId,
   });
 
@@ -424,14 +428,13 @@ const SafePayApproval: React.FC = () => {
         payloadRatings.communication = ratings.communication;
       if (ratings.tidiness && ratings.tidiness > 0) payloadRatings.tidiness = ratings.tidiness;
 
-      const res = await mainLink.post('/api/safepay-checkout/approve', {
+      return approveCheckout({
         orderId,
         ratings: payloadRatings,
         comment,
         photos,
         recommendWorker,
       });
-      return res.data;
     },
     onSuccess: (data: { payoutWarning?: string; payoutErrorCode?: string } | undefined) => {
       setIsSuccess(true);
@@ -464,13 +467,8 @@ const SafePayApproval: React.FC = () => {
 
   // Mutation to update checklist items
   const updateChecklistItemMutation = useMutation({
-    mutationFn: async ({ itemId, checked }: { itemId: string; checked: boolean }) => {
-      const res = await mainLink.put(
-        `/api/safepay-checkout/contract/${orderId}/checklist/${itemId}`,
-        { checked }
-      );
-      return res.data;
-    },
+    mutationFn: ({ itemId, checked }: { itemId: string; checked: boolean }) =>
+      updateCheckoutChecklistItem(orderId!, itemId, checked),
     onSuccess: () => {
       refetch();
     },
@@ -485,6 +483,9 @@ const SafePayApproval: React.FC = () => {
    * at the one point in the flow where failing costs the provider their payout. The bytes
    * also ended up stored in the Review document itself.
    */
+  const reviewPhotosMutation = useMutation({
+    mutationFn: (body: FormData) => uploadReviewPhotos(orderId!, body),
+  });
   const handlePhotoSelect = async (files: File[]) => {
     if (!files.length || !orderId) return;
 
@@ -506,14 +507,9 @@ const SafePayApproval: React.FC = () => {
       const body = new FormData();
       compressed.forEach((file) => body.append('photos', file));
 
-      // The header override is required, not decorative: `mainLink` defaults to
-      // `Content-Type: application/json`, and axios 1.x serialises a FormData body to JSON
-      // when it sees a JSON content type — the files would arrive as `{}`. The browser
-      // adapter replaces this with the real boundary before sending.
-      const res = await mainLink.post(`/api/safepay-checkout/review-photos/${orderId}`, body, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      const urls: string[] = res.data?.urls ?? [];
+      // multipart header override lives in uploadReviewPhotos (see note there).
+      const res = await reviewPhotosMutation.mutateAsync(body);
+      const urls: string[] = res?.urls ?? [];
       if (!urls.length) throw new Error('Ingen bilder ble lastet opp.');
 
       setPhotos((prev) => [...prev, ...urls]);

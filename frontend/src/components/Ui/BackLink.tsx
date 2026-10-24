@@ -46,5 +46,3 @@ export function BackLink({
     </button>
   );
 }
-
-export default BackLink;

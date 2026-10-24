@@ -32,9 +32,9 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '../../components/Ui/table';
-import { Button } from '../../components/Ui/Button';
-import { Calendar } from '../../components/Ui/calendar';
+} from '../../components/developer/ui/table';
+import { Button } from '../../components/developer/ui/button';
+import { Calendar } from '../../components/developer/ui/calendar';
 import type { ColumnDef } from '../../components/admin/AdminDataTable';
 
 const STATUS_OPTIONS = [
@@ -136,32 +136,32 @@ function FinanceMetricCard({
     mode: SafePayFinanceSummary['mode'];
 }) {
     return (
-        <article className="flex min-h-44 flex-col justify-between rounded-2xl border border-[#e6e7e1] bg-[#fbfcfa] p-4 sm:p-5">
+        <article className="flex min-h-44 flex-col justify-between rounded-lg border border-border bg-card p-4 sm:p-5">
             <div className="flex items-start justify-between gap-3">
-                <h3 className="text-xs font-medium text-[#747b72]">
+                <h3 className="text-xs font-medium text-muted-foreground">
                     {title}{mode === 'all' ? '' : ` · ${mode === 'live' ? 'Live' : 'Test'}`}
                 </h3>
-                <span className="rounded-xl bg-[#eaf1e9] p-2 text-[#2e6641]">{icon}</span>
+                <span className="rounded-md bg-primary/10 p-2 text-primary">{icon}</span>
             </div>
             {metrics.length ? (
                 <div className="space-y-1.5">
                     {metrics.map((metric) => (
                         <div key={metric.key} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                            <span className="text-xs text-[#747b72]">
+                            <span className="text-xs text-muted-foreground">
                                 {mode === 'all' ? `${metric.liveMode === undefined ? 'Ukjent modus' : metric.liveMode ? 'Live' : 'Test'} · ` : ''}
                                 {metric.currency.toUpperCase()}
                             </span>
-                            <span className="text-xl font-semibold tracking-tight text-[#26332a] tabular-nums">
+                            <span className="text-xl font-semibold tracking-tight text-foreground tabular-nums">
                                 {formatMinor(amount(metric), metric.currency)}
                             </span>
                         </div>
                     ))}
-                    <p className="text-xs text-[#747b72]">
+                    <p className="text-xs text-muted-foreground">
                         {metrics.reduce((total, metric) => total + count(metric), 0).toLocaleString('nb-NO')} {countLabel}
                     </p>
                 </div>
             ) : (
-                <p className="text-sm text-[#747b72]">Ingen finansposter registrert ennå.</p>
+                <p className="text-sm text-muted-foreground">Ingen finansposter registrert ennå.</p>
             )}
         </article>
     );
@@ -201,7 +201,7 @@ function FollowUpStatus({ contract }: { contract: SafePayContract }) {
     if (isPastConnectDeadline(contract)) {
         return <AdminStatusBadge status="deadline_expired" />;
     }
-    return <span className="text-sm text-gray-400">–</span>;
+    return <span className="text-sm text-muted-foreground">–</span>;
 }
 
 function FollowUpPanel({
@@ -220,15 +220,15 @@ function FollowUpPanel({
     if (!loading && !error && total === 0) return null;
 
     return (
-        <section className="overflow-hidden rounded-2xl border border-amber-200/80 bg-[#fffdf8]" aria-labelledby="safepay-followup-title">
+        <section className="overflow-hidden rounded-lg border border-amber-200/80 bg-card" aria-labelledby="safepay-followup-title">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-100 px-5 py-4">
                 <div className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-800">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-md bg-amber-100 text-amber-800">
                         <AlertTriangle size={17} />
                     </span>
                     <div>
-                        <h2 id="safepay-followup-title" className="text-sm font-semibold text-gray-900">Krever oppfølging</h2>
-                        <p className="text-xs text-gray-500">Kun aktive Connect-frister og refusjonssaker fra SafePay-dataene.</p>
+                        <h2 id="safepay-followup-title" className="text-sm font-semibold text-foreground">Krever oppfølging</h2>
+                        <p className="text-xs text-muted-foreground">Kun aktive Connect-frister og refusjonssaker fra SafePay-dataene.</p>
                     </div>
                 </div>
                 {!loading && !error && total > 0 && (
@@ -248,10 +248,10 @@ function FollowUpPanel({
                         {contracts.map((contract) => (
                             <li key={contract._id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
                                 <div className="min-w-0">
-                                    <Link to={`/dashboard/safepay/${contract._id}`} className="font-mono text-xs font-semibold text-[#315542] hover:underline">
+                                    <Link to={`/dashboard/safepay/${contract._id}`} className="font-mono text-xs font-semibold text-primary hover:underline">
                                         #{contract._id.slice(-8).toUpperCase()}
                                     </Link>
-                                    <p className="mt-0.5 truncate text-sm text-gray-700">
+                                    <p className="mt-0.5 truncate text-sm text-foreground">
                                         {contract.serviceId?.title ?? 'Tjeneste ikke tilgjengelig'}
                                         {contract.providerId?.name ? ` · ${contract.providerId.name}` : ''}
                                     </p>
@@ -260,7 +260,7 @@ function FollowUpPanel({
                                     <FollowUpStatus contract={contract} />
                                     <Link
                                         to={`/dashboard/safepay/${contract._id}`}
-                                        className="text-xs font-semibold text-[#315542] hover:underline"
+                                        className="text-xs font-semibold text-primary hover:underline"
                                     >
                                         Se sak
                                     </Link>
@@ -270,7 +270,7 @@ function FollowUpPanel({
                     </ul>
                     {total > contracts.length && (
                         <div className="border-t border-amber-100 px-5 py-3">
-                            <Link to="/dashboard/safepay?timeoutReview=true" className="text-xs font-semibold text-[#315542] hover:underline">
+                            <Link to="/dashboard/safepay?timeoutReview=true" className="text-xs font-semibold text-primary hover:underline">
                                 Vis alle {total} oppfølgingssaker
                             </Link>
                         </div>
@@ -351,10 +351,10 @@ export default function SafePayPage() {
             header: 'Kontrakt',
             render: (contract) => (
                 <div className="min-w-[108px]">
-                    <Link to={`/dashboard/safepay/${contract._id}`} className="font-mono text-xs font-semibold text-[#315542] hover:underline">
+                    <Link to={`/dashboard/safepay/${contract._id}`} className="font-mono text-xs font-semibold text-primary hover:underline">
                         #{contract._id.slice(-8).toUpperCase()}
                     </Link>
-                    <p className="mt-1 text-[11px] text-gray-400">{new Date(contract.createdAt).toLocaleDateString('nb-NO')}</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{new Date(contract.createdAt).toLocaleDateString('nb-NO')}</p>
                 </div>
             ),
         },
@@ -363,8 +363,8 @@ export default function SafePayPage() {
             header: 'Tjeneste',
             render: (contract) => (
                 <div className="max-w-[190px]">
-                    <p className="truncate text-sm font-medium text-gray-800">{contract.serviceId?.title ?? '–'}</p>
-                    <p className="mt-1 text-xs text-gray-400">Chat <ChatIdCell chatId={contract.chatId} reviewSource="safepay" /></p>
+                    <p className="truncate text-sm font-medium text-foreground">{contract.serviceId?.title ?? '–'}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Chat <ChatIdCell chatId={contract.chatId} reviewSource="safepay" /></p>
                 </div>
             ),
         },
@@ -373,8 +373,8 @@ export default function SafePayPage() {
             header: 'Kunde / tilbyder',
             render: (contract) => (
                 <div className="min-w-[160px] space-y-1">
-                    <p className="truncate text-sm text-gray-800">{contract.customerId?.name ?? 'Kunde –'}</p>
-                    <p className="truncate text-xs text-gray-500">{contract.providerId?.name ?? 'Tilbyder –'}</p>
+                    <p className="truncate text-sm text-foreground">{contract.customerId?.name ?? 'Kunde –'}</p>
+                    <p className="truncate text-xs text-muted-foreground">{contract.providerId?.name ?? 'Tilbyder –'}</p>
                 </div>
             ),
         },
@@ -383,8 +383,8 @@ export default function SafePayPage() {
             header: 'Avtalt pris',
             render: (contract) => (
                 <div className="whitespace-nowrap">
-                    <p className="text-sm font-semibold text-gray-900">{contract.agreedPrice != null ? formatNok(contract.agreedPrice) : '–'}</p>
-                    {contract.fee != null && <p className="mt-1 text-xs text-gray-500">Gebyr {formatNok(contract.fee)}</p>}
+                    <p className="text-sm font-semibold text-foreground">{contract.agreedPrice != null ? formatNok(contract.agreedPrice) : '–'}</p>
+                    {contract.fee != null && <p className="mt-1 text-xs text-muted-foreground">Gebyr {formatNok(contract.fee)}</p>}
                 </div>
             ),
         },
@@ -403,14 +403,14 @@ export default function SafePayPage() {
             header: 'Connect-konto',
             render: (contract) => contract.safePayStatus?.providerConnectStatus
                 ? <AdminStatusBadge status={contract.safePayStatus.providerConnectStatus} />
-                : <span className="text-sm text-gray-400">–</span>,
+                : <span className="text-sm text-muted-foreground">–</span>,
         },
         {
             key: 'refund',
             header: 'Refusjon',
             render: (contract) => contract.safePayStatus?.refundStatus && contract.safePayStatus.refundStatus !== 'none'
                 ? <AdminStatusBadge status={contract.safePayStatus.refundStatus} />
-                : <span className="text-sm text-gray-400">–</span>,
+                : <span className="text-sm text-muted-foreground">–</span>,
         },
         {
             key: 'followUp',
@@ -427,7 +427,7 @@ export default function SafePayPage() {
                         <AdminStatusBadge status={contract.dispute.status} />
                     </Link>
                 )
-                : <span className="text-sm text-gray-300">–</span>,
+                : <span className="text-sm text-muted-foreground/60">–</span>,
         },
         {
             key: 'actions',
@@ -435,7 +435,7 @@ export default function SafePayPage() {
             headerClassName: 'w-24',
             className: 'text-right',
             render: (contract) => (
-                <Link to={`/dashboard/safepay/${contract._id}`} className="inline-flex items-center rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-[#315542] transition hover:border-[#b5c8b8] hover:bg-[#f4f8f4]">
+                <Link to={`/dashboard/safepay/${contract._id}`} className="inline-flex items-center rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-primary transition hover:border-primary/40 hover:bg-muted/50">
                     Detaljer
                 </Link>
             ),
@@ -454,7 +454,7 @@ export default function SafePayPage() {
                 title="SafePay"
                 description="Oversikt over kontrakter, innbetalinger og oppfølging."
                 actions={(
-                    <Button variant="outline" onClick={reload} disabled={isFetching || financeSummaryLoading} className="gap-2 bg-white">
+                    <Button variant="outline" onClick={reload} disabled={isFetching || financeSummaryLoading} className="gap-2 bg-card">
                         <RefreshCw size={15} className={isFetching ? 'animate-spin' : ''} />
                         Oppdater
                     </Button>
@@ -463,12 +463,12 @@ export default function SafePayPage() {
 
             <section aria-label="SafePay nøkkeltall" className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
                 <div className="sm:col-span-2 xl:col-span-3 flex justify-end">
-                    <label className="flex items-center gap-2 text-xs font-medium text-[#747b72]">
+                    <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                         Stripe-modus
                         <select
                             value={financeMode}
                             onChange={(event) => setFinanceMode(event.target.value as SafePayFinanceSummary['mode'])}
-                            className="min-h-10 rounded-xl border border-[#dfe3dc] bg-white px-3 py-2 text-sm text-[#26332a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2e6641]"
+                            className="min-h-10 rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                         >
                             <option value="all">Test + live</option>
                             <option value="test">Test</option>
@@ -477,9 +477,9 @@ export default function SafePayPage() {
                     </label>
                 </div>
                 {financeSummaryLoading ? Array.from({ length: 3 }, (_, index) => (
-                    <div key={index} aria-hidden="true" className="min-h-44 animate-pulse rounded-2xl bg-[#f0f2ee] motion-reduce:animate-none" />
+                    <div key={index} aria-hidden="true" className="min-h-44 animate-pulse rounded-lg bg-muted motion-reduce:animate-none" />
                 )) : financeSummaryError ? (
-                    <div className="sm:col-span-2 xl:col-span-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
+                    <div className="sm:col-span-2 xl:col-span-3 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
                         Finansoversikten kunne ikke lastes.
                         <button type="button" onClick={() => { void refetchFinanceSummary(); }} className="ml-2 font-semibold underline">
                             Prøv igjen
@@ -526,43 +526,43 @@ export default function SafePayPage() {
                 onRetry={() => { void attention.refetch(); }}
             />
 
-            <section aria-label="SafePay-kontrakter" className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
+            <section aria-label="SafePay-kontrakter" className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
                     <div>
-                        <h2 className="text-sm font-semibold text-gray-900">Kontrakter</h2>
-                        <p className="mt-1 text-xs text-gray-500">Filtrer og undersøk betalings- og oppfølgingsstatus.</p>
+                        <h2 className="text-sm font-semibold text-foreground">Kontrakter</h2>
+                        <p className="mt-1 text-xs text-muted-foreground">Filtrer og undersøk betalings- og oppfølgingsstatus.</p>
                     </div>
-                    {data?.pagination && <span className="text-xs font-medium text-gray-500">{data.pagination.total} treff</span>}
+                    {data?.pagination && <span className="text-xs font-medium text-muted-foreground">{data.pagination.total} treff</span>}
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 border-b border-gray-100 bg-white px-5 py-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 border-b border-border bg-card px-5 py-4 sm:grid-cols-2">
                     <AdminSearchInput
                         value={search}
                         onChange={setSearch}
                         placeholder="Søk etter ordre-ID"
                         className="min-w-0"
-                        inputClassName="!h-12 !max-h-none !rounded-xl !border-[#dfe3dc] !bg-white !pl-11 !text-sm !text-[#26332a] !placeholder:text-[#858c83]"
+                        inputClassName="!h-12 !max-h-none !rounded-md !border-border !bg-card !pl-11 !text-sm !text-foreground !placeholder:text-muted-foreground"
                     />
                     <AdminFilterSelect
                         value={statusFilter}
                         onChange={(value) => { setStatusFilter(value); setPage(1); }}
                         options={STATUS_OPTIONS}
                         placeholder="Alle statuser"
-                        className="!h-12 !min-w-0 !w-full !rounded-xl !border-[#dfe3dc] !bg-white !px-4 !text-sm !text-[#26332a]"
+                        className="!h-12 !min-w-0 !w-full !rounded-md !border-border !bg-card !px-4 !text-sm !text-foreground"
                     />
                     <Popover.Root open={fromDateOpen} onOpenChange={setFromDateOpen}>
                         <Popover.Trigger asChild>
                             <button
                                 type="button"
                                 aria-label="Fra dato"
-                                className="inline-flex min-h-12 min-w-0 w-full items-center justify-between gap-2 rounded-xl border border-[#dfe3dc] bg-white px-4 py-2 text-left text-sm text-[#26332a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2e6641]"
+                                className="inline-flex min-h-12 min-w-0 w-full items-center justify-between gap-2 rounded-md border border-border bg-card px-4 py-2 text-left text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                             >
-                                <span className={dateFrom ? '' : 'text-[#858c83]'}>{dateLabel(dateFrom, 'Fra dato')}</span>
-                                <CalendarDays size={18} className="shrink-0 text-[#747b72]" />
+                                <span className={dateFrom ? '' : 'text-muted-foreground'}>{dateLabel(dateFrom, 'Fra dato')}</span>
+                                <CalendarDays size={18} className="shrink-0 text-muted-foreground" />
                             </button>
                         </Popover.Trigger>
                         <Popover.Portal>
-                            <Popover.Content align="start" sideOffset={6} collisionPadding={12} className="z-50 rounded-2xl border border-[#e6e7e1] bg-white p-2 shadow-lg">
+                            <Popover.Content align="start" sideOffset={6} collisionPadding={12} className="z-50 rounded-lg border border-border bg-card p-2 shadow-lg">
                                 <Calendar
                                     mode="single"
                                     locale={nb}
@@ -582,14 +582,14 @@ export default function SafePayPage() {
                             <button
                                 type="button"
                                 aria-label="Til dato"
-                                className="inline-flex min-h-12 min-w-0 w-full items-center justify-between gap-2 rounded-xl border border-[#dfe3dc] bg-white px-4 py-2 text-left text-sm text-[#26332a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2e6641]"
+                                className="inline-flex min-h-12 min-w-0 w-full items-center justify-between gap-2 rounded-md border border-border bg-card px-4 py-2 text-left text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                             >
-                                <span className={dateTo ? '' : 'text-[#858c83]'}>{dateLabel(dateTo, 'Til dato')}</span>
-                                <CalendarDays size={18} className="shrink-0 text-[#747b72]" />
+                                <span className={dateTo ? '' : 'text-muted-foreground'}>{dateLabel(dateTo, 'Til dato')}</span>
+                                <CalendarDays size={18} className="shrink-0 text-muted-foreground" />
                             </button>
                         </Popover.Trigger>
                         <Popover.Portal>
-                            <Popover.Content align="start" sideOffset={6} collisionPadding={12} className="z-50 rounded-2xl border border-[#e6e7e1] bg-white p-2 shadow-lg">
+                            <Popover.Content align="start" sideOffset={6} collisionPadding={12} className="z-50 rounded-lg border border-border bg-card p-2 shadow-lg">
                                 <Calendar
                                     mode="single"
                                     locale={nb}
@@ -605,17 +605,17 @@ export default function SafePayPage() {
                         </Popover.Portal>
                     </Popover.Root>
                     <details className="sm:col-span-2">
-                        <summary className="w-fit cursor-pointer py-1 text-xs font-semibold text-[#315542] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2e6641]">
+                        <summary className="w-fit cursor-pointer py-1 text-xs font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
                             Flere filtre
                         </summary>
                         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                            <AdminFilterSelect value={paymentFilter} onChange={(value) => { setPaymentFilter(value); setPage(1); }} options={PAYMENT_OPTIONS} placeholder="Alle betalinger" className="!h-12 !min-w-0 !w-full !rounded-xl !border-[#dfe3dc] !bg-white !px-4 !text-sm !text-[#26332a]" />
-                            <AdminFilterSelect value={timeoutReview} onChange={(value) => { setTimeoutReview(value); setSearchParams(value ? { timeoutReview: value } : {}); setPage(1); }} options={[{ label: 'Krever oppfølging', value: 'true' }]} placeholder="Connect / refusjon" className="!h-12 !min-w-0 !w-full !rounded-xl !border-[#dfe3dc] !bg-white !px-4 !text-sm !text-[#26332a]" />
+                            <AdminFilterSelect value={paymentFilter} onChange={(value) => { setPaymentFilter(value); setPage(1); }} options={PAYMENT_OPTIONS} placeholder="Alle betalinger" className="!h-12 !min-w-0 !w-full !rounded-md !border-border !bg-card !px-4 !text-sm !text-foreground" />
+                            <AdminFilterSelect value={timeoutReview} onChange={(value) => { setTimeoutReview(value); setSearchParams(value ? { timeoutReview: value } : {}); setPage(1); }} options={[{ label: 'Krever oppfølging', value: 'true' }]} placeholder="Connect / refusjon" className="!h-12 !min-w-0 !w-full !rounded-md !border-border !bg-card !px-4 !text-sm !text-foreground" />
                             <button
                                 type="button"
                                 onClick={clearFilters}
                                 disabled={activeFilterCount === 0}
-                                className="min-h-12 min-w-0 w-full rounded-xl border border-[#dfe3dc] px-3 py-2 text-sm font-semibold text-[#59645b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2e6641] disabled:cursor-not-allowed disabled:opacity-45"
+                                className="min-h-12 min-w-0 w-full rounded-md border border-border px-3 py-2 text-sm font-semibold text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-45"
                             >
                                 Nullstill filtre
                             </button>
@@ -623,13 +623,13 @@ export default function SafePayPage() {
                     </details>
                 </div>
                 {activeFilterCount > 0 && (
-                    <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 px-5 py-3" aria-label="Aktive filtre">
-                        {debouncedSearch && <span className="rounded-full bg-[#f0f2ee] px-3 py-1 text-xs text-[#465249]">Søk: {debouncedSearch}</span>}
-                        {statusFilter && <span className="rounded-full bg-[#f0f2ee] px-3 py-1 text-xs text-[#465249]">Ordre: {STATUS_OPTIONS.find((option) => option.value === statusFilter)?.label ?? statusFilter}</span>}
-                        {paymentFilter && <span className="rounded-full bg-[#f0f2ee] px-3 py-1 text-xs text-[#465249]">Betaling: {PAYMENT_OPTIONS.find((option) => option.value === paymentFilter)?.label ?? paymentFilter}</span>}
-                        {timeoutReview && <span className="rounded-full bg-[#f0f2ee] px-3 py-1 text-xs text-[#465249]">Connect / refusjon: Krever oppfølging</span>}
-                        {dateFrom && <span className="rounded-full bg-[#f0f2ee] px-3 py-1 text-xs text-[#465249]">Fra: {dateLabel(dateFrom, 'Fra dato')}</span>}
-                        {dateTo && <span className="rounded-full bg-[#f0f2ee] px-3 py-1 text-xs text-[#465249]">Til: {dateLabel(dateTo, 'Til dato')}</span>}
+                    <div className="flex flex-wrap items-center gap-2 border-b border-border px-5 py-3" aria-label="Aktive filtre">
+                        {debouncedSearch && <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">Søk: {debouncedSearch}</span>}
+                        {statusFilter && <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">Ordre: {STATUS_OPTIONS.find((option) => option.value === statusFilter)?.label ?? statusFilter}</span>}
+                        {paymentFilter && <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">Betaling: {PAYMENT_OPTIONS.find((option) => option.value === paymentFilter)?.label ?? paymentFilter}</span>}
+                        {timeoutReview && <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">Connect / refusjon: Krever oppfølging</span>}
+                        {dateFrom && <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">Fra: {dateLabel(dateFrom, 'Fra dato')}</span>}
+                        {dateTo && <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">Til: {dateLabel(dateTo, 'Til dato')}</span>}
                     </div>
                 )}
 
@@ -650,11 +650,11 @@ export default function SafePayPage() {
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
-                                    <TableRow className="border-b border-gray-100 bg-white hover:bg-white">
+                                    <TableRow className="border-b border-border bg-card hover:bg-white">
                                         {columns.map((column) => (
-                                            <TableHead key={column.key} className={`h-11 whitespace-nowrap px-4 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500 ${column.headerClassName ?? ''}`}>
+                                            <TableHead key={column.key} className={`h-11 whitespace-nowrap px-4 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground ${column.headerClassName ?? ''}`}>
                                                 {column.key === 'contract' ? (
-                                                    <button type="button" onClick={() => setSortOrder((order) => order === 'desc' ? 'asc' : 'desc')} className="inline-flex items-center gap-1.5 hover:text-gray-900" aria-label={`Sorter etter opprettet dato (${sortOrder === 'desc' ? 'nyeste først' : 'eldste først'})`}>
+                                                    <button type="button" onClick={() => setSortOrder((order) => order === 'desc' ? 'asc' : 'desc')} className="inline-flex items-center gap-1.5 hover:text-foreground" aria-label={`Sorter etter opprettet dato (${sortOrder === 'desc' ? 'nyeste først' : 'eldste først'})`}>
                                                         Kontrakt
                                                         {sortOrder === 'desc' ? <ArrowDown size={12} /> : <ArrowUp size={12} />}
                                                     </button>
@@ -665,7 +665,7 @@ export default function SafePayPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {data.contracts.map((contract) => (
-                                        <TableRow key={contract._id} className="border-b border-gray-50 align-middle transition-colors hover:bg-[#f7faf7]">
+                                        <TableRow key={contract._id} className="border-b border-border align-middle transition-colors hover:bg-muted/50">
                                             {columns.map((column) => (
                                                 <TableCell key={column.key} className={`px-4 py-3.5 ${column.className ?? ''}`}>
                                                     {column.render(contract)}
@@ -678,10 +678,10 @@ export default function SafePayPage() {
                         </div>
                         {data.pagination && (
                             <div>
-                                <p className="border-t border-gray-100 bg-gray-50/60 px-5 py-3 text-xs text-gray-500">
+                                <p className="border-t border-border bg-muted/50 px-5 py-3 text-xs text-muted-foreground">
                                     Connect viser kontotilkobling, ikke en bankutbetaling. Status for overføring til bank er ikke tilgjengelig i SafePay-dataene.
                                 </p>
-                                <div className="border-t border-gray-100 px-5">
+                                <div className="border-t border-border px-5">
                                     <AdminPagination pagination={data.pagination} onPageChange={setPage} />
                                 </div>
                             </div>

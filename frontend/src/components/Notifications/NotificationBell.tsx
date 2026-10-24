@@ -242,5 +242,3 @@ export function NotificationBell() {
     </div>
   );
 }
-
-export default NotificationBell;

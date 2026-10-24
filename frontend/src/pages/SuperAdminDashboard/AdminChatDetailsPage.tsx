@@ -37,7 +37,7 @@ export default function AdminChatDetailsPage() {
             <div className="flex items-center gap-3">
                 <Link
                     to="/dashboard/chats"
-                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+                    className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                     <ArrowLeft size={16} aria-hidden="true" /> Tilbake til chatter
                 </Link>

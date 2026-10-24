@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useCategories } from '../../features/categories/hooks';
-import { Search, Info, Check, Sparkles, Loader2, X, Plus, AlertCircle, Wand2 } from 'lucide-react';
+import { Search, Info, Check, Sparkles, Loader2, X, Plus, AlertCircle } from 'lucide-react';
 import type { CategoryType } from '../../features/categories/types';
-import mainLink from '../../api/mainURLs';
+import { useMutation } from '@tanstack/react-query';
+import { generateJobInfo, generateJobTitle } from '../../api/aiAPI';
 import { useTranslate } from '../../i18n/useTranslate';
 import toast from 'react-hot-toast';
 import { summariseAiFill, clampMessage } from '../../utils/aiFillSummary';
@@ -68,8 +69,6 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
   setDurationValue,
   setDurationUnit,
   setHourlyRate,
-  maxApplicants,
-  setMaxApplicants,
   errors,
   durationValue,
   durationUnit,
@@ -85,8 +84,10 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
 }) => {
   const { data: categoryData = [], isLoading, error } = useCategories();
   const [searchTerm, setSearchTerm] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
+  const jobInfoMutation = useMutation({ mutationFn: generateJobInfo });
+  const titleMutation = useMutation({ mutationFn: generateJobTitle });
+  const isGenerating = jobInfoMutation.isPending;
+  const isGeneratingTitle = titleMutation.isPending;
   const [showTitleAiInput, setShowTitleAiInput] = useState(false);
   const [titleAiPrompt, setTitleAiPrompt] = useState('');
   const [newTag, setNewTag] = useState('');
@@ -121,9 +122,8 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
     };
     const flags: any = {};
 
-    setIsGenerating(true);
     try {
-      const res = await mainLink.post('/api/ai/generate-job-info', {
+      const data = await jobInfoMutation.mutateAsync({
         lang: locale,
         title,
         category: categories,
@@ -138,7 +138,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
         existingDescription: description || undefined,
       });
 
-      if (res.data?.success) {
+      if (data?.success) {
         const {
           description: aiDesc,
           estimatedPrice,
@@ -149,7 +149,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
           duration: aiDuration,
           skills: aiSkills,
           pricingReasoning,
-        } = res.data.data;
+        } = data.data;
 
         if (!userHas.description && aiDesc) {
           setDescription(aiDesc);
@@ -195,8 +195,6 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
         err.response?.data?.error ||
         'Kunne ikke generere AI-innhold. Sjekk API-nøkkel.';
       toast.error(clampMessage(errorMessage));
-    } finally {
-      setIsGenerating(false);
     }
   };
 
@@ -214,9 +212,8 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
     };
     const flags: any = {};
 
-    setIsGeneratingTitle(true);
     try {
-      const res = await mainLink.post('/api/ai/generate-title', {
+      const data = await titleMutation.mutateAsync({
         lang: locale,
         description: titleAiPrompt,
         category: categories,
@@ -230,7 +227,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
         urgent,
       });
 
-      if (res.data?.success) {
+      if (data?.success) {
         const {
           title: aiTitle,
           estimatedPrice,
@@ -240,7 +237,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
           duration: aiDuration,
           skills: aiSkills,
           pricingReasoning,
-        } = res.data.data;
+        } = data.data;
 
         if (!userHas.title && aiTitle) {
           setTitle(aiTitle);
@@ -277,8 +274,6 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
       const errorMessage =
         err.response?.data?.error || err.response?.data?.message || 'Kunne ikke generere tittel.';
       toast.error(clampMessage(errorMessage));
-    } finally {
-      setIsGeneratingTitle(false);
     }
   };
 
@@ -554,39 +549,6 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
           </div>
         </div>
       </div>
-
-      {/* 5. Max Applicants Section - HIDDEN FOR NOW */}
-      {/* <div className="box-card-custom rounded-[14px] p-4 md:p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-[#2D7A4D]/10 rounded-full flex items-center justify-center text-[#2D7A4D]">
-            <Plus size={22} />
-          </div>
-          <div>
-            <h2 className="font-bold text-lg md:text-xl text-custom-black">Maks antall søkere</h2>
-            <p className="text-gray-500 text-xs md:text-sm">
-              Hvor mange søknader ønsker du å motta før oppdraget skjules? (0 for ubegrenset)
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <input
-            type="number"
-            min="0"
-            value={maxApplicants}
-            onChange={(e) => setMaxApplicants(e.target.value)}
-            placeholder="F.eks. 5"
-            className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white outline-none focus:border-[#2D7A4D] transition-all text-sm font-bold"
-          />
-          <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex gap-3">
-            <Info size={18} className="text-blue-500 shrink-0" />
-            <p className="text-[11px] md:text-xs text-blue-700 leading-relaxed">
-              Når grensen er nådd, vil "Søk nå"-knappen bli deaktivert for andre brukere. Dette
-              hjelper deg med å unngå for mange henvendelser.
-            </p>
-          </div>
-        </div>
-      </div> */}
     </div>
   );
 };

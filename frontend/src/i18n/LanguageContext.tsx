@@ -3,7 +3,7 @@ import React, { createContext, useState, useCallback, useEffect } from 'react';
 import type { SupportedLocale, TranslationKeys } from './types';
 import { defaultLocale, TRANSLATIONS } from './types';
 
-export interface LanguageContextValue {
+interface LanguageContextValue {
     locale: SupportedLocale;
     setLocale: (locale: SupportedLocale) => void;
     t: (path: string, fallback?: string) => string;

@@ -1,10 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { ShoppingCart } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAdminOrders, useCancelAdminOrder } from '../../hooks/admin';
 import type { AdminOrdersQuery, AdminOrder } from '../../api/admin';
 import {
     AdminDataTable,
-    AdminSearchInput,
     AdminFilterSelect,
     AdminStatusBadge,
     AdminConfirmDialog,
@@ -51,18 +51,18 @@ export default function OrdersPage() {
             key: 'id',
             header: 'Ordre-ID',
             render: (o) => (
-                <span className="font-mono text-xs text-gray-500">
+                <Link to={`/dashboard/orders/${o._id}`} className="font-mono text-xs text-primary hover:underline">
                     {o._id.slice(-8).toUpperCase()}
-                </span>
+                </Link>
             ),
         },
         {
             key: 'service',
             header: 'Tjeneste',
             render: (o) => (
-                <span className="text-sm font-medium text-gray-800 truncate max-w-[160px] block">
+                <Link to={`/dashboard/orders/${o._id}`} className="block max-w-[160px] truncate text-sm font-medium text-foreground hover:underline">
                     {o.serviceId?.title ?? '–'}
-                </span>
+                </Link>
             ),
         },
         {
@@ -70,8 +70,8 @@ export default function OrdersPage() {
             header: 'Kunde',
             render: (o) => (
                 <div>
-                    <p className="text-sm font-medium text-gray-800">{o.customerId?.name ?? '–'}</p>
-                    <p className="text-xs text-gray-400">{o.customerId?.email ?? ''}</p>
+                    <p className="text-sm font-medium text-foreground">{o.customerId?.name ?? '–'}</p>
+                    <p className="text-xs text-muted-foreground">{o.customerId?.email ?? ''}</p>
                 </div>
             ),
         },
@@ -79,7 +79,7 @@ export default function OrdersPage() {
             key: 'provider',
             header: 'Tilbyder',
             render: (o) => (
-                <span className="text-sm text-gray-600">{o.providerId?.name ?? '–'}</span>
+                <span className="text-sm text-muted-foreground">{o.providerId?.name ?? '–'}</span>
             ),
         },
         {
@@ -87,8 +87,8 @@ export default function OrdersPage() {
             header: 'Beløp',
             render: (o) =>
                 o.agreedPrice != null
-                    ? <span className="font-semibold text-gray-800">{o.agreedPrice.toLocaleString('nb-NO')} NOK</span>
-                    : <span className="text-gray-400">–</span>,
+                    ? <span className="font-semibold text-foreground">{o.agreedPrice.toLocaleString('nb-NO')} NOK</span>
+                    : <span className="text-muted-foreground">–</span>,
         },
         {
             key: 'status',
@@ -119,7 +119,7 @@ export default function OrdersPage() {
                         Avbryt
                     </button>
                 ) : (
-                    <span className="text-xs text-gray-300">–</span>
+                    <span className="text-xs text-muted-foreground/60">–</span>
                 ),
         },
     ];
@@ -149,7 +149,7 @@ export default function OrdersPage() {
                 onPageChange={setPage}
                 toolbar={
                     <div className="flex flex-wrap gap-3 w-full">
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <ShoppingCart size={16} />
                             <span>{data?.pagination.total ?? 0} ordrer totalt</span>
                         </div>

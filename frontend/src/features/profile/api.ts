@@ -41,13 +41,6 @@ export const getTopUsers = async (
   return response.data;
 };
 
-export const searchAll = async (query: string, type?: string, page?: number, limit?: number) => {
-  const response = await mainLink.get('/api/users/search-all', {
-    params: { query, type, page, limit },
-  });
-  return response.data;
-};
-
 export const getUserReviews = async (userId: string, role?: string) => {
   const response = await mainLink.get(`/api/users/${userId}/reviews`, {
     params: { role },
@@ -103,5 +96,10 @@ export const deleteExperience = async (expId: string) => {
 
 export const getSafePayHistory = async (userId: string) => {
   const response = await mainLink.get(`/api/safepay/history/${userId}`);
+  return response.data;
+};
+
+export const deleteUserAccount = async (userId: string, feedback?: string) => {
+  const response = await mainLink.delete(`/api/users/${userId}`, { data: { feedback } });
   return response.data;
 };

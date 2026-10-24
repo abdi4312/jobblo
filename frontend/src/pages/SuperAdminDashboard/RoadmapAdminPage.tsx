@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ListPlus, Trash2, Edit3, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { Trash2, Edit3 } from 'lucide-react';
 import {
   Button,
   Space,
@@ -129,7 +129,7 @@ const RoadmapAdminPage = () => {
       dataIndex: 'tag',
       key: 'tag',
       render: (tag: string) => (
-        <Tag className="uppercase text-[10px] font-bold text-gray-400 italic">{tag}</Tag>
+        <Tag className="uppercase text-[10px] font-bold text-muted-foreground italic">{tag}</Tag>
       ),
     },
     {

@@ -26,6 +26,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { Button } from '../../components/Ui/button/Button';
 import SafePaySteps from '../../components/SafePay/SafePaySteps';
+import { useMutation } from '@tanstack/react-query';
 import { createOrGetChat } from '../../api/chatAPI';
 import EmptyState from '../../components/Ui/EmptyState';
 import { timeFormatter } from '../../utils/timeFormatter';
@@ -39,6 +40,10 @@ const ApplicantsPage: React.FC = () => {
   const [comparedApplicants, setComparedApplicants] = useState<string[]>([]);
   // Moved here from below the early returns — a hook after an early return is React error #310.
   const [chatStartingFor, setChatStartingFor] = useState<string | null>(null);
+  const startChatMutation = useMutation({
+    mutationFn: ({ applicantId, serviceId }: { applicantId: string; serviceId: string }) =>
+      createOrGetChat(applicantId, serviceId),
+  });
   const { data, isLoading, error, refetch } = useApplicantsQuery(serviceId!, sortBy, filterBy);
   const createContractMutation = useCreateSafePayContractMutation();
   const toggleFavoriteMutation = useToggleApplicantFavoriteMutation(serviceId!);
@@ -125,7 +130,7 @@ const ApplicantsPage: React.FC = () => {
     if (chatStartingFor) return;
     setChatStartingFor(applicantId);
     try {
-      const chat = await createOrGetChat(applicantId, serviceId!);
+      const chat = await startChatMutation.mutateAsync({ applicantId, serviceId: serviceId! });
       navigate(`/messages/${chat._id}`);
     } catch (error) {
       console.error('Error starting chat:', error);

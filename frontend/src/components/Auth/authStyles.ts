@@ -6,11 +6,7 @@
  * @see src/theme/brand.ts
  */
 export {
-  INK,
-  GREEN,
-  LEAF,
   MICRO_LABEL,
-  PRIMARY_BUTTON as PRIMARY_BUTTON_BASE,
   TEXT_LINK,
   FIELD_ICON_BUTTON,
 } from '../../theme/brand';

@@ -19,6 +19,7 @@ type StatusVariant =
     | 'waiting_for_approval'
     | 'disputed'
     | 'superAdmin'
+    | 'developer'
     | 'provider'
     | 'company'
     | 'user'
@@ -41,9 +42,9 @@ const variantMap: Record<string, string> = {
     pending: 'bg-amber-50 text-amber-800 ring-amber-700/10',
     processing: 'bg-amber-50 text-amber-800 ring-amber-700/10',
     awaiting_payment: 'bg-orange-50 text-orange-800 ring-orange-700/10',
-    inactive: 'bg-slate-100 text-slate-600 ring-slate-500/10',
+    inactive: 'bg-muted text-slate-600 ring-slate-500/10',
     cancelled: 'bg-rose-50 text-rose-800 ring-rose-700/10',
-    closed: 'bg-slate-100 text-slate-600 ring-slate-500/10',
+    closed: 'bg-muted text-slate-600 ring-slate-500/10',
     failed: 'bg-rose-50 text-rose-800 ring-rose-700/10',
     partially_refunded: 'bg-violet-50 text-violet-800 ring-violet-700/10',
     unpaid: 'bg-orange-50 text-orange-800 ring-orange-700/10',
@@ -58,9 +59,10 @@ const variantMap: Record<string, string> = {
     accepted: 'bg-emerald-50 text-emerald-800 ring-emerald-700/10',
     awaiting_provider_connect: 'bg-orange-50 text-orange-800 ring-orange-700/10',
     superAdmin: 'bg-rose-50 text-rose-800 ring-rose-700/10',
+    developer: 'bg-sky-50 text-sky-800 ring-sky-700/10',
     provider: 'bg-indigo-50 text-indigo-800 ring-indigo-700/10',
     company: 'bg-violet-50 text-violet-800 ring-violet-700/10',
-    user: 'bg-slate-100 text-slate-700 ring-slate-500/10',
+    user: 'bg-muted text-slate-700 ring-slate-500/10',
 };
 
 const labelMap: Record<string, string> = {
@@ -69,6 +71,7 @@ const labelMap: Record<string, string> = {
     waiting_for_approval: 'Venter godkjenning',
     awaiting_payment: 'Venter betaling',
     superAdmin: 'Super Admin',
+    developer: 'Utvikler',
     provider: 'Tilbyder',
     company: 'Bedrift',
     user: 'Bruker',
@@ -109,7 +112,7 @@ interface AdminStatusBadgeProps {
 }
 
 export function AdminStatusBadge({ status, className }: AdminStatusBadgeProps) {
-    const colorClass = variantMap[status] ?? 'bg-gray-100 text-gray-600';
+    const colorClass = variantMap[status] ?? 'bg-muted text-muted-foreground';
     const label = labelMap[status] ?? status;
     return (
         <span

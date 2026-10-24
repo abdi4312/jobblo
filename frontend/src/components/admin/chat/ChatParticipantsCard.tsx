@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { ExternalLink, ShieldCheck } from 'lucide-react';
 import { AdminStatusBadge } from '../AdminStatusBadge';
@@ -28,27 +27,27 @@ function ParticipantRow({
             />
             <div className="min-w-0 flex-1 space-y-0.5">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-sm font-semibold text-gray-800">{participant.name}</span>
+                    <span className="text-sm font-semibold text-foreground">{participant.name}</span>
                     {participant.verified && (
                         <ShieldCheck size={13} className="text-green-500" aria-label="Verifisert" />
                     )}
                 </div>
-                <p className="text-xs text-gray-400">{participant.email}</p>
-                <p className="text-xs text-gray-400 capitalize">{role}</p>
+                <p className="text-xs text-muted-foreground">{participant.email}</p>
+                <p className="text-xs text-muted-foreground capitalize">{role}</p>
                 <div className="flex items-center gap-2 flex-wrap mt-1">
                     {participant.accountStatus && (
                         <AdminStatusBadge status={participant.accountStatus} />
                     )}
                 </div>
                 {participant.averageRating !== undefined && (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                         ⭐ {participant.averageRating.toFixed(1)} · {participant.completedJobs ?? 0} jobber
                     </p>
                 )}
                 {participant.profileLink && (
                     <Link
                         to={participant.profileLink}
-                        className="inline-flex items-center gap-1 text-xs text-[#2d4a3e] hover:underline mt-1"
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
                     >
                         Se profil <ExternalLink size={10} aria-hidden="true" />
                     </Link>
@@ -60,29 +59,29 @@ function ParticipantRow({
 
 export function ChatParticipantsCard({ participants }: ChatParticipantsCardProps) {
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 p-5">
-            <h3 className="text-sm font-semibold text-gray-800 mb-4 border-b border-gray-50 pb-2">
+        <div className="bg-card rounded-lg border border-border p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-4 border-b border-border pb-2">
                 Deltakere
             </h3>
             <div className="space-y-5">
                 <div>
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                         Kunde
                     </p>
                     {participants.customer ? (
                         <ParticipantRow participant={participants.customer} role="Kunde" />
                     ) : (
-                        <p className="text-sm text-gray-400">Ikke tilgjengelig</p>
+                        <p className="text-sm text-muted-foreground">Ikke tilgjengelig</p>
                     )}
                 </div>
-                <div className="border-t border-gray-50 pt-4">
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                <div className="border-t border-border pt-4">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                         Tilbyder
                     </p>
                     {participants.provider ? (
                         <ParticipantRow participant={participants.provider} role="Tilbyder" />
                     ) : (
-                        <p className="text-sm text-gray-400">Ikke tilgjengelig</p>
+                        <p className="text-sm text-muted-foreground">Ikke tilgjengelig</p>
                     )}
                 </div>
             </div>

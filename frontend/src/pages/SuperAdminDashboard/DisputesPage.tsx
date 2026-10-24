@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, Shield, Clock, Users, CheckCircle2, Loader2 } from 'lucide-react';
 import { useAdminDisputes, useDisputesSummary, useAssignDispute, useUpdateDisputeStatus, useResolveDispute, useReopenDispute, useAddInternalNote } from '../../hooks/admin/safepay';
@@ -32,7 +32,7 @@ const PRIORITY_OPTIONS = [
 ];
 
 const PRIORITY_COLOR: Record<string, string> = {
-    low: 'text-gray-500 bg-gray-50',
+    low: 'text-muted-foreground bg-muted/50',
     medium: 'text-yellow-600 bg-yellow-50',
     high: 'text-orange-600 bg-orange-50',
     critical: 'text-red-700 bg-red-100',
@@ -100,7 +100,7 @@ export default function DisputesPage() {
             key: 'id',
             header: 'Tvist-ID',
             render: (d) => (
-                <Link to={`/dashboard/disputes/${d._id}`} className="font-mono text-xs text-[#2d4a3e] hover:underline">
+                <Link to={`/dashboard/disputes/${d._id}`} className="font-mono text-xs text-primary hover:underline">
                     {d._id.slice(-8).toUpperCase()}
                 </Link>
             ),
@@ -113,10 +113,10 @@ export default function DisputesPage() {
                     typeof d.orderId === 'object' ? d.orderId?._id : d.orderId;
                 return (
                     orderId ? (
-                        <Link to={`/dashboard/safepay/${orderId}`} className="text-xs font-mono text-gray-600 hover:underline">
+                        <Link to={`/dashboard/safepay/${orderId}`} className="text-xs font-mono text-muted-foreground hover:underline">
                             {orderId.slice(-8).toUpperCase()}
                         </Link>
-                    ) : <span className="text-xs text-gray-400">–</span>
+                    ) : <span className="text-xs text-muted-foreground">–</span>
                 );
             },
         },
@@ -130,15 +130,15 @@ export default function DisputesPage() {
             header: 'Åpnet av',
             render: (d) => (
                 <div>
-                    <p className="text-sm text-gray-800">{d.openedBy?.name ?? '–'}</p>
-                    <p className="text-xs text-gray-400 capitalize">{d.openedByRole ?? d.openedBy?.role ?? ''}</p>
+                    <p className="text-sm text-foreground">{d.openedBy?.name ?? '–'}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{d.openedByRole ?? d.openedBy?.role ?? ''}</p>
                 </div>
             ),
         },
         {
             key: 'reason',
             header: 'Årsak',
-            render: (d) => <span className="text-xs text-gray-600">{d.reasonCategory.replace(/_/g, ' ')}</span>,
+            render: (d) => <span className="text-xs text-muted-foreground">{d.reasonCategory.replace(/_/g, ' ')}</span>,
         },
         {
             key: 'amount',
@@ -147,7 +147,7 @@ export default function DisputesPage() {
                 const order = typeof d.orderId === 'object' ? d.orderId : null;
                 return order?.agreedPrice != null
                     ? <span className="text-sm font-medium">{order.agreedPrice.toLocaleString('nb-NO')} NOK</span>
-                    : <span className="text-gray-400">–</span>;
+                    : <span className="text-muted-foreground">–</span>;
             },
         },
         {
@@ -168,7 +168,7 @@ export default function DisputesPage() {
             key: 'assigned',
             header: 'Tildelt',
             render: (d) => d.assignedAdminId
-                ? <span className="text-xs text-gray-700">{d.assignedAdminId.name}</span>
+                ? <span className="text-xs text-foreground">{d.assignedAdminId.name}</span>
                 : <span className="text-xs text-orange-500">Ikke tildelt</span>,
         },
         {
@@ -208,7 +208,7 @@ export default function DisputesPage() {
                         {isResolved && (
                             <button
                                 onClick={() => { setReopenTarget(d); }}
-                                className="px-2.5 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                className="px-2.5 py-1.5 text-xs font-medium text-muted-foreground bg-muted hover:bg-accent rounded-lg transition-colors"
                             >
                                 Gjenåpne
                             </button>
@@ -261,16 +261,16 @@ export default function DisputesPage() {
             {/* Resolve dialog */}
             {resolveTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4">
-                        <h2 className="text-lg font-bold text-gray-900">Løs tvist: {resolveTarget.title}</h2>
-                        <p className="text-sm text-gray-500">Alle handlinger logges og varsler berørte parter. Stripe-refusjoner behandles i sanntid.</p>
+                    <div className="bg-card rounded-lg shadow-xl w-full max-w-lg p-6 space-y-4">
+                        <h2 className="text-lg font-bold text-foreground">Løs tvist: {resolveTarget.title}</h2>
+                        <p className="text-sm text-muted-foreground">Alle handlinger logges og varsler berørte parter. Stripe-refusjoner behandles i sanntid.</p>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Utfall *</label>
+                            <label className="block text-sm font-medium text-foreground mb-1">Utfall *</label>
                             <select
                                 value={resolveForm.outcome}
                                 onChange={(e) => setResolveForm((f) => ({ ...f, outcome: e.target.value as DisputeOutcome }))}
-                                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50"
+                                className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50"
                             >
                                 <option value="">Velg utfall</option>
                                 {OUTCOME_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -278,9 +278,9 @@ export default function DisputesPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Begrunnelse *</label>
+                            <label className="block text-sm font-medium text-foreground mb-1">Begrunnelse *</label>
                             <textarea rows={3} value={resolveForm.reason} onChange={(e) => setResolveForm((f) => ({ ...f, reason: e.target.value }))}
-                                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 resize-none"
+                                className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50 resize-none"
                                 placeholder="Forklar hvorfor du valgte dette utfallet..."
                             />
                         </div>
@@ -288,15 +288,15 @@ export default function DisputesPage() {
                         {['partial_refund', 'split_payment'].includes(resolveForm.outcome) && (
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Kundebeløp (NOK)</label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">Kundebeløp (NOK)</label>
                                     <input type="number" min="0" value={resolveForm.customerAmount} onChange={(e) => setResolveForm((f) => ({ ...f, customerAmount: e.target.value }))}
-                                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50"
+                                        className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Tilbyderbeløp (NOK)</label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">Tilbyderbeløp (NOK)</label>
                                     <input type="number" min="0" value={resolveForm.providerAmount} onChange={(e) => setResolveForm((f) => ({ ...f, providerAmount: e.target.value }))}
-                                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50"
+                                        className="w-full px-3 py-2.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50"
                                     />
                                 </div>
                             </div>
@@ -307,11 +307,11 @@ export default function DisputesPage() {
                         </p>
 
                         <div className="flex justify-end gap-2 pt-2">
-                            <button onClick={() => setResolveTarget(null)} className="px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">Avbryt</button>
+                            <button onClick={() => setResolveTarget(null)} className="px-4 py-2.5 text-sm font-medium text-muted-foreground bg-muted hover:bg-accent rounded-md transition-colors">Avbryt</button>
                             <button
                                 onClick={handleResolve}
                                 disabled={resolveMutation.isPending || !resolveForm.outcome || !resolveForm.reason.trim()}
-                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#2d4a3e] hover:bg-[#233b31] rounded-xl transition-colors disabled:opacity-50"
+                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary/90 rounded-md transition-colors disabled:opacity-50"
                             >
                                 {resolveMutation.isPending && <Loader2 size={14} className="animate-spin" />}
                                 Bekreft løsning

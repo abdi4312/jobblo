@@ -13,7 +13,7 @@
  * screens do). This exists for the pages that only have a raw price.
  */
 
-export const SAFEPAY_FEE_RATE = 0.03;
+const SAFEPAY_FEE_RATE = 0.03;
 
 export const safePayFee = (price: number): number =>
   Math.round((Number(price) || 0) * SAFEPAY_FEE_RATE);

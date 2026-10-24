@@ -21,7 +21,7 @@ export interface Campaign {
   disclaimer: string;
 }
 
-export interface CampaignAnalytics {
+interface CampaignAnalytics {
   total: { impressions: number; clicks: number; closes: number; ctr: number };
   variants: Record<'A' | 'B', { impressions: number; clicks: number; closes: number; ctr: number }>;
 }

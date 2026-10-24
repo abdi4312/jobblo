@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   blockUser,
   getBlockedUsers,
@@ -13,7 +13,6 @@ import {
   deleteCertification,
   addExperience,
   deleteExperience,
-  searchAll,
   searchUsers,
   updateUser,
   getSafePayHistory,
@@ -107,31 +106,6 @@ export const useTopUsers = (
     ],
     queryFn: () => getTopUsers(page, limit, opts),
     enabled: isAuthenticated,
-  });
-};
-
-export const useUnifiedSearch = (query: string) => {
-  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
-  return useQuery({
-    queryKey: ['unifiedSearch', query],
-    queryFn: () => searchAll(query),
-    enabled: isAuthenticated && query.length >= 2,
-  });
-};
-
-export const useInfiniteSearch = (query: string, type: string, limit: number = 10) => {
-  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
-  return useInfiniteQuery({
-    queryKey: ['infiniteSearch', query, type, limit],
-    queryFn: ({ pageParam = 1 }) => searchAll(query, type, pageParam, limit),
-    getNextPageParam: (lastPage) => {
-      if (lastPage.page < lastPage.totalPages) {
-        return lastPage.page + 1;
-      }
-      return undefined;
-    },
-    initialPageParam: 1,
-    enabled: isAuthenticated && query.length >= 2 && !!type,
   });
 };
 

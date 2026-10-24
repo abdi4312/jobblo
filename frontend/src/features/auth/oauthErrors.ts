@@ -13,7 +13,7 @@
  * provider from the profile page.
  */
 
-export const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   // An account already uses this e-mail address, and the provider identity is not
   // linked to it. We refuse to link on e-mail alone.
   vipps_account_exists:

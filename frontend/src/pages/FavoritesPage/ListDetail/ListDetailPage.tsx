@@ -9,7 +9,6 @@ import {
 import { useUserStore } from '../../../stores/userStore';
 import { JobCard } from '../../../components/component/jobCard/JobCard';
 import Swal from 'sweetalert2';
-import { toast } from 'react-hot-toast';
 import EditListModal from './EditListModal';
 import AddContributorModal from './AddContributorModal';
 import ContributorsModal from './ContributorsModal';

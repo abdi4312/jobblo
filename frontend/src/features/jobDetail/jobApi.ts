@@ -19,10 +19,10 @@ export const createChat = async (payload: { providerId: string; serviceId: strin
 
 // 4. Stripe Payment API (402 error handling ke liye)
 export const createStripeSession = async (payload: {
-  amount: number;
-  providerId: string;
+  amount?: number;
+  providerId?: string;
   serviceId: string;
-}) => {
+}): Promise<{ url: string }> => {
   const { data } = await mainLink.post('/api/stripe/create-extra-contact-payment', payload);
   return data;
 };

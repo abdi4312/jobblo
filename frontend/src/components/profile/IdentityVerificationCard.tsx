@@ -150,5 +150,3 @@ export function IdentityVerificationCard({
     </section>
   );
 }
-
-export default IdentityVerificationCard;

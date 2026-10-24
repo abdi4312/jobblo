@@ -14,16 +14,16 @@ import {
   AdminStatusBadge,
 } from '../../components/admin';
 import type { ColumnDef } from '../../components/admin/AdminDataTable';
-import { Button } from '../../components/Ui/Button';
-import { Input } from '../../components/Ui/Input';
-import { Textarea } from '../../components/Ui/textarea';
+import { Button } from '../../components/developer/ui/button';
+import { Input } from '../../components/developer/ui/input';
+import { Textarea } from '../../components/developer/ui/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../components/Ui/select';
+} from '../../components/developer/ui/select';
 import {
   useCampaignAnalytics,
   useCampaignDefaults,
@@ -53,7 +53,7 @@ const dateInput = (value: string) => {
 function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0 space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
+      <label htmlFor={id} className="block text-sm font-medium text-foreground">{label}</label>
       {children}
     </div>
   );
@@ -62,9 +62,9 @@ function Field({ label, id, children }: { label: string; id: string; children: R
 function Metric({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
     <div className="border-l-2 border-custom-green pl-3 py-1">
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-gray-900">{value}</p>
-      {detail && <p className="text-xs text-gray-500">{detail}</p>}
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-xl font-semibold text-foreground">{value}</p>
+      {detail && <p className="text-xs text-muted-foreground">{detail}</p>}
     </div>
   );
 }
@@ -99,8 +99,8 @@ export default function CampaignManagementPage() {
       header: 'Kampanje',
       render: (campaign) => (
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-gray-800">{campaign.name}</p>
-          <p className="mt-0.5 truncate text-xs text-gray-400">{campaign.bannerCtaLabel} · Popup {campaign.popupDelayMs / 1000}s</p>
+          <p className="truncate text-sm font-semibold text-foreground">{campaign.name}</p>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">{campaign.bannerCtaLabel} · Popup {campaign.popupDelayMs / 1000}s</p>
         </div>
       ),
     },
@@ -113,7 +113,7 @@ export default function CampaignManagementPage() {
       key: 'period',
       header: 'Kampanjeperiode',
       render: (campaign) => (
-        <span className="whitespace-nowrap text-sm text-gray-600">
+        <span className="whitespace-nowrap text-sm text-muted-foreground">
           {new Date(campaign.startDate).toLocaleDateString('nb-NO')} – {new Date(campaign.endDate).toLocaleDateString('nb-NO')}
         </span>
       ),
@@ -268,19 +268,19 @@ export default function CampaignManagementPage() {
         return (
           <section className="space-y-5" aria-labelledby="campaign-settings-heading">
             <div>
-              <h2 id="campaign-settings-heading" className="text-base font-semibold text-gray-900">Grunninnstillinger</h2>
-              <p className="mt-1 text-sm text-gray-500">Navngi kampanjen og velg når den skal være synlig.</p>
+              <h2 id="campaign-settings-heading" className="text-base font-semibold text-foreground">Grunninnstillinger</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Navngi kampanjen og velg når den skal være synlig.</p>
             </div>
             <Field label="Kampanjenavn" id="campaign-name">
               <Input id="campaign-name" value={form.name} onChange={change('name')} maxLength={120} required />
             </Field>
-            <div className="flex flex-col justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50/70 p-4 sm:flex-row sm:items-center">
+            <div className="flex flex-col justify-between gap-3 rounded-md border border-border bg-muted/50 p-4 sm:flex-row sm:items-center">
               <div>
-                <p className="text-sm font-medium text-gray-800">Publiser kampanjen</p>
-                <p className="mt-0.5 text-xs text-gray-500">Når aktivert, blir kampanjen vist innenfor den valgte perioden.</p>
+                <p className="text-sm font-medium text-foreground">Publiser kampanjen</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">Når aktivert, blir kampanjen vist innenfor den valgte perioden.</p>
               </div>
               <label className="inline-flex cursor-pointer items-center gap-3">
-                <span className="text-sm text-gray-600">{form.enabled ? 'På' : 'Av'}</span>
+                <span className="text-sm text-muted-foreground">{form.enabled ? 'På' : 'Av'}</span>
                 <input
                   type="checkbox"
                   checked={form.enabled}
@@ -288,7 +288,7 @@ export default function CampaignManagementPage() {
                   className="peer sr-only"
                   aria-label="Aktiver kampanje"
                 />
-                <span className="relative h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-[#2d4a3e] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#2d4a3e] after:absolute after:left-0.5 after:top-0.5 after:size-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5" />
+                <span className="relative h-6 w-11 rounded-full bg-muted-foreground/30 transition-colors peer-checked:bg-primary peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring after:absolute after:left-0.5 after:top-0.5 after:size-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5" />
               </label>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -305,8 +305,8 @@ export default function CampaignManagementPage() {
         return (
           <section className="space-y-5" aria-labelledby="campaign-banner-heading">
             <div>
-              <h2 id="campaign-banner-heading" className="text-base font-semibold text-gray-900">Landingssidebanner</h2>
-              <p className="mt-1 text-sm text-gray-500">Banneret vises så lenge kampanjen er aktiv og innenfor kampanjeperioden.</p>
+              <h2 id="campaign-banner-heading" className="text-base font-semibold text-foreground">Landingssidebanner</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Banneret vises så lenge kampanjen er aktiv og innenfor kampanjeperioden.</p>
             </div>
             <Field label="Bannertekst" id="campaign-banner-text">
               <Textarea id="campaign-banner-text" rows={4} value={form.bannerText} onChange={change('bannerText')} maxLength={1000} required />
@@ -325,8 +325,8 @@ export default function CampaignManagementPage() {
         return (
           <section className="space-y-5" aria-labelledby="campaign-popup-heading">
             <div>
-              <h2 id="campaign-popup-heading" className="text-base font-semibold text-gray-900">Popup og A/B-varianter</h2>
-              <p className="mt-1 text-sm text-gray-500">Besøkende fordeles automatisk likt mellom variant A og B.</p>
+              <h2 id="campaign-popup-heading" className="text-base font-semibold text-foreground">Popup og A/B-varianter</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Besøkende fordeles automatisk likt mellom variant A og B.</p>
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
               <Field label="Variant A" id="campaign-popup-a">
@@ -356,8 +356,8 @@ export default function CampaignManagementPage() {
         return (
           <section className="space-y-5" aria-labelledby="campaign-terms-heading">
             <div>
-              <h2 id="campaign-terms-heading" className="text-base font-semibold text-gray-900">Kampanjevilkår</h2>
-              <p className="mt-1 text-sm text-gray-500">Fullstendige vilkår vises på den offentlige vilkårssiden.</p>
+              <h2 id="campaign-terms-heading" className="text-base font-semibold text-foreground">Kampanjevilkår</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Fullstendige vilkår vises på den offentlige vilkårssiden.</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Lenketekst" id="campaign-terms-label">
@@ -437,7 +437,7 @@ export default function CampaignManagementPage() {
       )}
 
       {view === 'edit' && !isNewCampaign && campaigns.length === 0 ? (
-        <div className="rounded-2xl border border-gray-100 bg-white">
+        <div className="rounded-lg border border-border bg-card">
           <AdminEmptyState
             title="Ingen kampanjer ennå"
             description="Opprett en kampanje for å konfigurere landingssidebanner, popup og vilkår."
@@ -451,11 +451,11 @@ export default function CampaignManagementPage() {
         </div>
       ) : view === 'edit' && form && (isNewCampaign || selected) ? (
         <>
-          {!isNewCampaign && selected && <section className="flex flex-col gap-4 rounded-2xl border border-gray-100 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          {!isNewCampaign && selected && <section className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
             <div className="min-w-0 flex-1">
-              <label htmlFor="campaign-select" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">Valgt kampanje</label>
+              <label htmlFor="campaign-select" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Valgt kampanje</label>
               <Select value={selected._id} onValueChange={setSelectedId}>
-                <SelectTrigger id="campaign-select" className="max-w-xl rounded-xl border-gray-200 bg-white">
+                <SelectTrigger id="campaign-select" className="max-w-xl rounded-md border-border bg-card">
                   <SelectValue placeholder="Velg kampanje" />
                 </SelectTrigger>
                 <SelectContent>
@@ -467,28 +467,28 @@ export default function CampaignManagementPage() {
             </div>
             <div className="flex flex-wrap items-center gap-3 sm:justify-end">
               <AdminStatusBadge status={campaignStatus} />
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 {new Date(selected.startDate).toLocaleDateString('nb-NO')} – {new Date(selected.endDate).toLocaleDateString('nb-NO')}
               </span>
             </div>
           </section>}
 
           {!isNewCampaign && analytics && (
-            <section aria-label="Kampanjeanalyse" className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
-              <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-800"><BarChart3 size={17} className="text-[#2d4a3e]" /> Resultater</div>
+            <section aria-label="Kampanjeanalyse" className="rounded-lg border border-border bg-card p-4 sm:p-5">
+              <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground"><BarChart3 size={17} className="text-primary" /> Resultater</div>
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 <Metric label="Visninger" value={analytics.total.impressions.toLocaleString('nb-NO')} />
                 <Metric label="CTA-klikk" value={analytics.total.clicks.toLocaleString('nb-NO')} />
                 <Metric label="Lukket" value={analytics.total.closes.toLocaleString('nb-NO')} />
                 <Metric label="CTR" value={`${analytics.total.ctr}%`} />
               </div>
-              <div className="mt-5 grid gap-4 border-t border-gray-100 pt-4 md:grid-cols-2">
+              <div className="mt-5 grid gap-4 border-t border-border pt-4 md:grid-cols-2">
                 {(['A', 'B'] as const).map((variant) => {
                   const stats = analytics.variants[variant];
                   return <div key={variant} className="min-w-0">
-                    <p className="mb-2 text-sm font-semibold text-gray-800">Variant {variant}</p>
-                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-gray-500 sm:grid-cols-4">
-                      <span>{stats.impressions} visninger</span><span>{stats.clicks} klikk</span><span>{stats.closes} lukket</span><span className="font-semibold text-[#2d4a3e]">CTR {stats.ctr}%</span>
+                    <p className="mb-2 text-sm font-semibold text-foreground">Variant {variant}</p>
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-muted-foreground sm:grid-cols-4">
+                      <span>{stats.impressions} visninger</span><span>{stats.clicks} klikk</span><span>{stats.closes} lukket</span><span className="font-semibold text-primary">CTR {stats.ctr}%</span>
                     </div>
                   </div>;
                 })}
@@ -496,9 +496,9 @@ export default function CampaignManagementPage() {
             </section>
           )}
 
-          <form onSubmit={save} className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+          <form onSubmit={save} className="overflow-hidden rounded-lg border border-border bg-card">
             <div className="grid min-h-112 lg:grid-cols-[14rem_minmax(0,1fr)]">
-              <nav aria-label="Kampanjeinnstillinger" className="flex gap-1 overflow-x-auto border-b border-gray-100 p-2 lg:flex-col lg:overflow-visible lg:border-b-0 lg:border-r lg:p-3">
+              <nav aria-label="Kampanjeinnstillinger" className="flex gap-1 overflow-x-auto border-b border-border p-2 lg:flex-col lg:overflow-visible lg:border-b-0 lg:border-r lg:p-3">
                 {sections.map((section) => {
                   const active = activeSection === section.id;
                   return (
@@ -508,12 +508,12 @@ export default function CampaignManagementPage() {
                       role="tab"
                       aria-selected={active}
                       onClick={() => setActiveSection(section.id)}
-                      className={`flex min-w-max items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors lg:w-full ${active ? 'bg-[#edf3ed] text-[#244b32]' : 'text-gray-600 hover:bg-gray-50'}`}
+                      className={`flex min-w-max items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors lg:w-full ${active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted/50'}`}
                     >
-                      <span className={active ? 'text-[#2d4a3e]' : 'text-gray-400'}>{section.icon}</span>
+                      <span className={active ? 'text-primary' : 'text-muted-foreground'}>{section.icon}</span>
                       <span className="min-w-0">
                         <span className="block text-sm font-semibold">{section.label}</span>
-                        <span className="hidden text-xs text-gray-500 lg:block">{section.description}</span>
+                        <span className="hidden text-xs text-muted-foreground lg:block">{section.description}</span>
                       </span>
                     </button>
                   );
@@ -523,8 +523,8 @@ export default function CampaignManagementPage() {
                 {sectionContent()}
               </div>
             </div>
-            <div className="flex flex-col-reverse gap-3 border-t border-gray-100 bg-gray-50/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-              <p className="text-xs text-gray-500">Endringer trer i kraft etter lagring.</p>
+            <div className="flex flex-col-reverse gap-3 border-t border-border bg-muted/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <p className="text-xs text-muted-foreground">Endringer trer i kraft etter lagring.</p>
               <div className="flex items-center justify-end gap-2">
                 {activeSection !== 'campaign' && (
                   <Button type="button" variant="secondary" size="sm" className="w-auto rounded-lg" onClick={() => setActiveSection(sections[sections.findIndex((section) => section.id === activeSection) - 1].id)}>

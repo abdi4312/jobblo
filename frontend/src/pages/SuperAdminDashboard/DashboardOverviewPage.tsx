@@ -60,8 +60,8 @@ function BarChart({ data }: { data: TrendPoint[] }) {
             >
                 <defs>
                     <linearGradient id="registration-bars" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stopColor="#437553" />
-                        <stop offset="100%" stopColor="#9bb89c" />
+                        <stop offset="0%" stopColor="var(--primary)" />
+                        <stop offset="100%" stopColor="var(--primary)" stopOpacity={0.45} />
                     </linearGradient>
                 </defs>
                 {[0, 0.5, 1].map((fraction) => {
@@ -69,8 +69,8 @@ function BarChart({ data }: { data: TrendPoint[] }) {
                     const value = Math.round(max * (1 - fraction));
                     return (
                         <g key={fraction}>
-                            <line x1={left} x2={chartWidth - right} y1={y} y2={y} stroke="#edf1ec" strokeDasharray="3 4" />
-                            <text x={left - 9} y={y + 4} textAnchor="end" className="fill-[#98a39b] text-[10px]">{value}</text>
+                            <line x1={left} x2={chartWidth - right} y1={y} y2={y} stroke="var(--border)" strokeDasharray="3 4" />
+                            <text x={left - 9} y={y + 4} textAnchor="end" className="fill-muted-foreground text-[10px]">{value}</text>
                         </g>
                     );
                 })}
@@ -101,7 +101,7 @@ function BarChart({ data }: { data: TrendPoint[] }) {
                             x={left + index * slot + slot / 2}
                             y={chartHeight - 7}
                             textAnchor={index === 0 ? 'start' : index === data.length - 1 ? 'end' : 'middle'}
-                            className="fill-[#87938a] text-[10px]"
+                            className="fill-muted-foreground text-[10px]"
                         >
                             {date.slice(8, 10)}.{date.slice(5, 7)}
                         </text>
@@ -115,10 +115,10 @@ function BarChart({ data }: { data: TrendPoint[] }) {
 // ─── Donut chart for role distribution ───────────────────────────────────────
 function DonutChart({ data }: { data: RoleDistribution }) {
     const COLORS: Record<string, string> = {
-        user: '#a7b6aa',
-        provider: '#477453',
-        company: '#93a77e',
-        superAdmin: '#294b36',
+        user: 'var(--chart-1)',
+        provider: 'var(--chart-2)',
+        company: 'var(--chart-3)',
+        superAdmin: 'var(--chart-4)',
     };
     const LABELS: Record<string, string> = {
         user: 'Bruker',
@@ -142,7 +142,7 @@ function DonutChart({ data }: { data: RoleDistribution }) {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-7" role="img" aria-label="Rollefordeling">
             <div className="relative size-36 shrink-0">
             <svg viewBox="0 0 120 120" className="size-full -rotate-90">
-                <circle cx={cx} cy={cy} r={r} fill="none" stroke="#edf1ec" strokeWidth={13} />
+                <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--border)" strokeWidth={13} />
                 {entries.map(([role, count]) => {
                     const fraction = count / total;
                     const dash = fraction * circumference;
@@ -155,7 +155,7 @@ function DonutChart({ data }: { data: RoleDistribution }) {
                             cy={cy}
                             r={r}
                             fill="none"
-                            stroke={COLORS[role] ?? '#9ca3af'}
+                            stroke={COLORS[role] ?? 'var(--chart-5)'}
                             strokeWidth={13}
                             strokeDasharray={`${dash} ${circumference}`}
                             strokeDashoffset={-offset}
@@ -167,8 +167,8 @@ function DonutChart({ data }: { data: RoleDistribution }) {
                 })}
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-semibold tracking-tight text-[#20382d] tabular-nums">{total.toLocaleString('nb-NO')}</span>
-                <span className="text-[10px] uppercase tracking-[0.12em] text-[#89948c]">brukere</span>
+                <span className="text-2xl font-semibold tracking-tight text-foreground tabular-nums">{total.toLocaleString('nb-NO')}</span>
+                <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">brukere</span>
             </div>
             </div>
             <ul className="w-full max-w-[190px] space-y-3 text-sm">
@@ -176,11 +176,11 @@ function DonutChart({ data }: { data: RoleDistribution }) {
                     <li key={role} className="flex items-center gap-2.5">
                         <span
                             className="size-2.5 rounded-full shrink-0"
-                            style={{ backgroundColor: COLORS[role] ?? '#9ca3af' }}
+                            style={{ backgroundColor: COLORS[role] ?? 'var(--chart-5)' }}
                             aria-hidden="true"
                         />
-                        <span className="text-[#68766d]">{LABELS[role] ?? role}</span>
-                        <span className="ml-auto font-semibold text-[#26382d] tabular-nums">{count.toLocaleString('nb-NO')}</span>
+                        <span className="text-muted-foreground">{LABELS[role] ?? role}</span>
+                        <span className="ml-auto font-semibold text-foreground tabular-nums">{count.toLocaleString('nb-NO')}</span>
                     </li>
                 ))}
             </ul>
@@ -195,11 +195,11 @@ function OrderStatusChart({ data }: { data: OrderStatusDistribution }) {
 
     const COLORS: Record<string, string> = {
         pending: 'bg-amber-400',
-        accepted: 'bg-[#789b7b]',
-        in_progress: 'bg-[#6f8c58]',
-        completed: 'bg-[#39734c]',
+        accepted: 'bg-primary/60',
+        in_progress: 'bg-primary/60',
+        completed: 'bg-primary',
         cancelled: 'bg-rose-400',
-        paid: 'bg-[#2d6642]',
+        paid: 'bg-primary',
         awaiting_payment: 'bg-orange-400',
         declined: 'bg-rose-500',
     };
@@ -223,15 +223,15 @@ function OrderStatusChart({ data }: { data: OrderStatusDistribution }) {
             {entries.map(([status, count]) => (
                 <div key={status} role="listitem">
                     <div className="mb-1.5 flex items-center justify-between gap-3 text-xs">
-                        <span className="text-[#526158] font-medium">{LABELS[status] ?? status}</span>
-                        <span className="text-[#34463a] font-semibold tabular-nums">
+                        <span className="text-muted-foreground font-medium">{LABELS[status] ?? status}</span>
+                        <span className="text-foreground font-semibold tabular-nums">
                             {(count ?? 0).toLocaleString('nb-NO')}
-                            <span className="ml-2 text-[#98a39b] font-normal">{total ? Math.round(((count ?? 0) / total) * 100) : 0}%</span>
+                            <span className="ml-2 text-muted-foreground font-normal">{total ? Math.round(((count ?? 0) / total) * 100) : 0}%</span>
                         </span>
                     </div>
-                    <div className="h-2.5 bg-[#f0f3ef] rounded-full overflow-hidden" aria-hidden="true">
+                    <div className="h-2.5 bg-muted rounded-full overflow-hidden" aria-hidden="true">
                         <div
-                            className={`h-full rounded-full transition-all duration-500 ${COLORS[status] ?? 'bg-gray-400'}`}
+                            className={`h-full rounded-full transition-all duration-500 ${COLORS[status] ?? 'bg-muted-foreground/30'}`}
                             style={{ width: `${((count ?? 0) / max) * 100}%` }}
                         />
                     </div>
@@ -245,7 +245,7 @@ function OrderStatusChart({ data }: { data: OrderStatusDistribution }) {
 function RecentUsersTable({ users }: { users: RecentUser[] }) {
     if (!users.length) return <AdminEmptyState description="Ingen nye brukere." className="py-6" />;
     return (
-        <ul className="divide-y divide-[#f0f2ee]" role="list">
+        <ul className="divide-y divide-border" role="list">
             {users.map((u) => (
                 <li key={u._id} className="flex items-center gap-3 py-2.5" role="listitem">
                     <img
@@ -254,11 +254,11 @@ function RecentUsersTable({ users }: { users: RecentUser[] }) {
                             `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=2d4a3e&color=fff&size=40`
                         }
                         alt={u.name}
-                        className="size-9 rounded-full object-cover shrink-0 ring-2 ring-[#f1f4f0]"
+                        className="size-9 rounded-full object-cover shrink-0 ring-2 ring-border"
                     />
                     <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-[#2a3d31] truncate">{u.name}</p>
-                        <p className="text-xs text-[#89948c] truncate">{u.email}</p>
+                        <p className="text-[13px] font-semibold text-foreground truncate">{u.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                     </div>
                     <AdminStatusBadge status={u.role} />
                 </li>
@@ -270,12 +270,12 @@ function RecentUsersTable({ users }: { users: RecentUser[] }) {
 function RecentServicesTable({ services }: { services: RecentService[] }) {
     if (!services.length) return <AdminEmptyState description="Ingen nye tjenester." className="py-6" />;
     return (
-        <ul className="divide-y divide-[#f0f2ee]" role="list">
+        <ul className="divide-y divide-border" role="list">
             {services.map((s) => (
                 <li key={s._id} className="py-2.5 flex items-center gap-3" role="listitem">
                     <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-[#2a3d31] truncate">{s.title}</p>
-                        <p className="text-xs text-[#89948c] truncate">
+                        <p className="text-[13px] font-semibold text-foreground truncate">{s.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">
                             {s.userId?.name ?? 'Ukjent'} ·{' '}
                             {formatDistanceToNow(new Date(s.createdAt), { addSuffix: true, locale: nb })}
                         </p>
@@ -290,14 +290,14 @@ function RecentServicesTable({ services }: { services: RecentService[] }) {
 function RecentOrdersTable({ orders }: { orders: RecentOrder[] }) {
     if (!orders.length) return <AdminEmptyState description="Ingen nye ordrer." className="py-6" />;
     return (
-        <ul className="divide-y divide-[#f0f2ee]" role="list">
+        <ul className="divide-y divide-border" role="list">
             {orders.map((o) => (
                 <li key={o._id} className="py-2.5 flex items-center gap-3" role="listitem">
                     <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-[#2a3d31] truncate">
+                        <p className="text-[13px] font-semibold text-foreground truncate">
                             {o.serviceId?.title ?? 'Ukjent tjeneste'}
                         </p>
-                        <p className="text-xs text-[#89948c] truncate">
+                        <p className="text-xs text-muted-foreground truncate">
                             {o.customerId?.name ?? 'Ukjent kunde'} ·{' '}
                             {o.agreedPrice != null
                                 ? `${o.agreedPrice.toLocaleString('nb-NO')} NOK`
@@ -322,12 +322,12 @@ function Section({
     children: React.ReactNode;
 }) {
     return (
-        <div className="bg-white rounded-[20px] border border-[#e7ebe5] p-5 md:p-6 shadow-[0_2px_10px_rgba(24,49,38,0.025)]">
+        <div className="bg-card rounded-lg border border-border p-5 md:p-6 shadow-[0_2px_10px_rgba(24,49,38,0.025)]">
             <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[15px] font-semibold text-[#20382d]">{title}</h3>
+                <h3 className="text-[15px] font-semibold text-foreground">{title}</h3>
                 <Link
                     to={to}
-                    className="flex items-center gap-1 text-xs text-[#386a48] font-semibold hover:text-[#1e4a30] focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 rounded"
+                    className="flex items-center gap-1 text-xs text-primary font-semibold hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-ring/50 rounded"
                 >
                     Se alle <ArrowRight size={13} />
                 </Link>
@@ -429,11 +429,11 @@ export default function DashboardOverviewPage() {
             <AdminPageHeader
                 title="Dashbord"
                 description="Oversikt over plattformaktivitet"
-                className="mb-0 rounded-[24px] border border-[#e4eae2] bg-white px-5 py-5 shadow-[0_2px_14px_rgba(24,49,38,0.035)] md:px-7 md:py-6"
+                className="mb-0"
                 actions={
                     <div className="flex items-center gap-3">
                         {dataUpdatedAt > 0 && (
-                            <span className="hidden text-xs text-[#89948c] sm:inline">
+                            <span className="hidden text-xs text-muted-foreground sm:inline">
                                 Oppdatert {format(new Date(dataUpdatedAt), 'HH:mm', { locale: nb })}
                             </span>
                         )}
@@ -441,7 +441,7 @@ export default function DashboardOverviewPage() {
                             type="button"
                             onClick={() => void refetch()}
                             disabled={isFetching}
-                            className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#dce4dc] bg-white px-3.5 text-sm font-semibold text-[#365b42] shadow-sm transition hover:border-[#b7c9b8] hover:bg-[#f8faf7] disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#397453]/50"
+                            className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-card px-3.5 text-sm font-semibold text-primary shadow-sm transition hover:border-primary/40 hover:bg-muted/50 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                         >
                             <RefreshCw size={15} className={isFetching ? 'animate-spin' : ''} />
                             Oppdater
@@ -453,8 +453,8 @@ export default function DashboardOverviewPage() {
             {/* KPI stat cards */}
             <section aria-label="Nøkkeltall" className="space-y-3">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#78857c]">Plattform i tall</h2>
-                    <span className="text-xs text-[#98a29a]">Sammendrag</span>
+                    <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Plattform i tall</h2>
+                    <span className="text-xs text-muted-foreground">Sammendrag</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-3.5">
                     {isLoading
@@ -510,22 +510,22 @@ export default function DashboardOverviewPage() {
                 </AdminChartCard>
 
                 {/* Recent activity */}
-                <div className="bg-white rounded-[20px] border border-[#e7ebe5] p-5 md:p-6 shadow-[0_2px_10px_rgba(24,49,38,0.025)]">
+                <div className="bg-card rounded-lg border border-border p-5 md:p-6 shadow-[0_2px_10px_rgba(24,49,38,0.025)]">
                     <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
                             <div className="flex items-center gap-2">
-                                <span className="flex size-8 items-center justify-center rounded-xl bg-[#eff4ee] text-[#477052]">
+                                <span className="flex size-8 items-center justify-center rounded-md bg-primary/10 text-primary">
                                     <Activity size={16} />
                                 </span>
-                                <h3 className="text-[15px] font-semibold text-[#20382d]">Siste adminaktivitet</h3>
+                                <h3 className="text-[15px] font-semibold text-foreground">Siste adminaktivitet</h3>
                             </div>
-                            <p className="mt-1.5 pl-10 text-xs text-[#87928a]">
+                            <p className="mt-1.5 pl-10 text-xs text-muted-foreground">
                                 {data?.recentActivity?.length ?? 0} siste hendelser · like systemmeldinger samles
                             </p>
                         </div>
                         <Link
-                            to="/dashboard/activity"
-                            className="inline-flex shrink-0 items-center gap-1 pt-1 text-xs font-semibold text-[#386a48] hover:text-[#1e4a30] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2d4a3e]/50 rounded"
+                            to="/developer/audit"
+                            className="inline-flex shrink-0 items-center gap-1 pt-1 text-xs font-semibold text-primary hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 rounded"
                         >
                             Aktivitetslogg <ArrowRight size={13} />
                         </Link>
@@ -533,7 +533,7 @@ export default function DashboardOverviewPage() {
                     {isLoading ? (
                         <div className="space-y-3">
                             {Array.from({ length: 4 }).map((_, i) => (
-                                <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />
+                                <div key={i} className="h-12 bg-muted rounded-lg animate-pulse" />
                             ))}
                         </div>
                     ) : !data?.recentActivity?.length ? (
@@ -557,7 +557,7 @@ export default function DashboardOverviewPage() {
                     {isLoading ? (
                         <div className="space-y-2">
                             {Array.from({ length: 4 }).map((_, i) => (
-                                <div key={i} className="h-10 bg-gray-100 rounded-lg animate-pulse" />
+                                <div key={i} className="h-10 bg-muted rounded-lg animate-pulse" />
                             ))}
                         </div>
                     ) : (
@@ -569,7 +569,7 @@ export default function DashboardOverviewPage() {
                     {isLoading ? (
                         <div className="space-y-2">
                             {Array.from({ length: 4 }).map((_, i) => (
-                                <div key={i} className="h-10 bg-gray-100 rounded-lg animate-pulse" />
+                                <div key={i} className="h-10 bg-muted rounded-lg animate-pulse" />
                             ))}
                         </div>
                     ) : (
@@ -581,7 +581,7 @@ export default function DashboardOverviewPage() {
                     {isLoading ? (
                         <div className="space-y-2">
                             {Array.from({ length: 4 }).map((_, i) => (
-                                <div key={i} className="h-10 bg-gray-100 rounded-lg animate-pulse" />
+                                <div key={i} className="h-10 bg-muted rounded-lg animate-pulse" />
                             ))}
                         </div>
                     ) : (

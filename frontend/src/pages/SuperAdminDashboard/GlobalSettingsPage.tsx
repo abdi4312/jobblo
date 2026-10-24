@@ -2,10 +2,10 @@ import { useState, useMemo } from 'react';
 import { Save, Settings, RefreshCw } from 'lucide-react';
 import { useAllConfigs, useUpdateConfig } from '../../hooks/admin/content';
 import { AdminPageHeader, AdminLoadingSkeleton, AdminErrorState } from '../../components/admin';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '../../components/Ui/dialog';
-import { Input } from '../../components/Ui/Input';
-import { Textarea } from '../../components/Ui/textarea';
-import { Button } from '../../components/Ui/Button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '../../components/developer/ui/dialog';
+import { Input } from '../../components/developer/ui/input';
+import { Textarea } from '../../components/developer/ui/textarea';
+import { Button } from '../../components/developer/ui/button';
 import { toast } from 'react-hot-toast';
 
 interface ConfigEntry {
@@ -136,19 +136,19 @@ export default function GlobalSettingsPage() {
           actions={
             <button
               onClick={() => refetch()}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-foreground bg-muted hover:bg-accent rounded-md transition-colors"
             >
               <RefreshCw size={16} />
               Oppdater
             </button>
           }
         />
-        <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
-          <div className="p-3 bg-gray-50 rounded-2xl inline-flex mb-3">
-            <Settings size={28} className="text-gray-300" />
+        <div className="bg-card rounded-lg border border-border p-8 text-center">
+          <div className="p-3 bg-muted/50 rounded-lg inline-flex mb-3">
+            <Settings size={28} className="text-muted-foreground/60" />
           </div>
-          <p className="text-sm font-semibold text-gray-700">Ingen innstillinger</p>
-          <p className="text-xs text-gray-400 mt-0.5">Det er ingen konfigurasjonsinnstillinger tilgjengelig.</p>
+          <p className="text-sm font-semibold text-foreground">Ingen innstillinger</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Det er ingen konfigurasjonsinnstillinger tilgjengelig.</p>
         </div>
       </div>
     );
@@ -162,7 +162,7 @@ export default function GlobalSettingsPage() {
         actions={
           <button
             onClick={() => refetch()}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-foreground bg-muted hover:bg-accent rounded-md transition-colors"
           >
             <RefreshCw size={16} />
             Oppdater
@@ -171,16 +171,16 @@ export default function GlobalSettingsPage() {
       />
 
       {connectDeadline && (
-        <section className="rounded-2xl border border-gray-100 bg-white p-5">
+        <section className="rounded-lg border border-border bg-card p-5">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">SafePay</h2>
-              <p className="mt-1 text-sm text-gray-500">
+              <h2 className="text-sm font-semibold text-foreground">SafePay</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
                 Frist for at utføreren starter oppdraget etter bekreftet betaling. Startes det
                 ikke i tide, kanselleres oppdraget og kunden får full refusjon automatisk.
                 Hver dag tilsvarer 24 timer.
               </p>
-              <p className="mt-2 text-sm font-medium text-gray-800">
+              <p className="mt-2 text-sm font-medium text-foreground">
                 Nåværende frist: {formatDisplayValue(connectDeadline.value)} dager
               </p>
             </div>
@@ -194,43 +194,43 @@ export default function GlobalSettingsPage() {
         </section>
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      <div className="bg-card rounded-lg border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-50 bg-gray-50/50">
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nøkkel</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Verdi</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Beskrivelse</th>
-                <th className="text-right px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Handlinger</th>
+              <tr className="border-b border-border bg-muted/50">
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nøkkel</th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Verdi</th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Beskrivelse</th>
+                <th className="text-right px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Handlinger</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-border">
               {visibleConfigs.map((entry) => (
-                <tr key={entry.key} className="hover:bg-gray-50/40 transition-colors">
+                <tr key={entry.key} className="hover:bg-muted/50 transition-colors">
                   <td className="px-5 py-3.5">
-                    <code className="text-sm font-mono font-medium text-gray-800">{entry.key}</code>
+                    <code className="text-sm font-mono font-medium text-foreground">{entry.key}</code>
                   </td>
                   <td className="px-5 py-3.5 max-w-[260px]">
-                    <span className="block truncate text-sm text-gray-600 font-mono" title={formatDisplayValue(entry.value)}>
+                    <span className="block truncate text-sm text-muted-foreground font-mono" title={formatDisplayValue(entry.value)}>
                       {formatDisplayValue(entry.value)}
                     </span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-muted text-muted-foreground">
                       {getValueType(entry.value)}
                     </span>
                   </td>
                   <td className="px-5 py-3.5 max-w-[200px]">
-                    <span className="block truncate text-sm text-gray-500">
-                      {entry.description ?? <span className="text-gray-300 italic">–</span>}
+                    <span className="block truncate text-sm text-muted-foreground">
+                      {entry.description ?? <span className="text-muted-foreground/60 italic">–</span>}
                     </span>
                   </td>
                   <td className="px-5 py-3.5 text-right">
                     <button
                       onClick={() => handleOpenEdit(entry)}
-                      className="px-3 py-1.5 text-xs font-medium text-[#2d4a3e] bg-[#2d4a3e]/10 hover:bg-[#2d4a3e]/20 rounded-lg transition-colors"
+                      className="px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors"
                     >
                       Rediger
                     </button>
@@ -240,8 +240,8 @@ export default function GlobalSettingsPage() {
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-3 border-t border-gray-50 bg-gray-50/30">
-          <p className="text-xs text-gray-400">{visibleConfigs.length} innstillinger totalt</p>
+        <div className="px-5 py-3 border-t border-border bg-muted/50">
+          <p className="text-xs text-muted-foreground">{visibleConfigs.length} innstillinger totalt</p>
         </div>
       </div>
 
@@ -255,14 +255,14 @@ export default function GlobalSettingsPage() {
           {editingConfig && (
             <div className="space-y-4 py-2">
               <div>
-                <label className="block mb-1 text-sm font-medium text-gray-700">Nøkkel</label>
-                <Input value={editingConfig.key} disabled className="bg-gray-50" />
+                <label className="block mb-1 text-sm font-medium text-foreground">Nøkkel</label>
+                <Input value={editingConfig.key} disabled className="bg-muted/50" />
               </div>
 
               <div>
-                <label className="block mb-1 text-sm font-medium text-gray-700">
+                <label className="block mb-1 text-sm font-medium text-foreground">
                   Verdi
-                  <span className="ml-1.5 text-xs text-gray-400 font-normal">
+                  <span className="ml-1.5 text-xs text-muted-foreground font-normal">
                     ({getValueType(editingConfig.value)})
                   </span>
                 </label>
@@ -288,7 +288,7 @@ export default function GlobalSettingsPage() {
               </div>
 
               <div>
-                <label className="block mb-1 text-sm font-medium text-gray-700">Beskrivelse</label>
+                <label className="block mb-1 text-sm font-medium text-foreground">Beskrivelse</label>
                 <Input
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
@@ -305,7 +305,7 @@ export default function GlobalSettingsPage() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="bg-[#2d4a3e] hover:bg-[#233b31] text-white"
+              className="bg-primary hover:bg-primary/90 text-white"
             >
               {saving ? (
                 <span className="flex items-center gap-2">

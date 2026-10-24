@@ -6,7 +6,16 @@ import {
     Upload, Clock, AlertTriangle, FileText, Check, ChevronRight,
     Loader2, Camera, TrendingUp, Star, X, Image as ImageIcon, ZoomIn, Trash2,
 } from 'lucide-react';
-import mainLink from '../../api/mainURLs';
+import {
+    getProviderOrder,
+    markOrderReadyForReview,
+    openOrderDispute,
+    removeOrderEvidence,
+    startProviderOrder,
+    updateProviderChecklistItem,
+    uploadOrderEvidence,
+} from '../../api/safePayAPI';
+import { createReview, getReviewByOrder } from '../../api/reviewsAPI';
 import { toast } from 'react-hot-toast';
 import { useUserStore } from '../../stores/userStore';
 import { Button } from '../../components/Ui/button/Button';
@@ -175,10 +184,7 @@ const ProviderOrderDetailPage: React.FC = () => {
 
     const { data, isLoading, error } = useQuery({
         queryKey: ['provider-order', orderId],
-        queryFn: async () => {
-            const res = await mainLink.get(`/api/safepay/orders/${orderId}`);
-            return res.data;
-        },
+        queryFn: () => getProviderOrder(orderId!),
         enabled: !!orderId,
         refetchInterval: 30000,
     });
@@ -186,7 +192,7 @@ const ProviderOrderDetailPage: React.FC = () => {
     const invalidate = () => queryClient.invalidateQueries({ queryKey: ['provider-order', orderId] });
 
     const startMutation = useMutation({
-        mutationFn: () => mainLink.post(`/api/safepay/orders/${orderId}/start`),
+        mutationFn: () => startProviderOrder(orderId!),
         onSuccess: () => { setConnectRequired(false); toast.success('Jobb startet!'); invalidate(); },
         onError: (e: any) => {
             if (e.response?.data?.code === 'STRIPE_CONNECT_REQUIRED') {
@@ -198,14 +204,14 @@ const ProviderOrderDetailPage: React.FC = () => {
     });
 
     const readyMutation = useMutation({
-        mutationFn: () => mainLink.post(`/api/safepay/orders/${orderId}/ready-for-review`),
+        mutationFn: () => markOrderReadyForReview(orderId!),
         onSuccess: () => { toast.success('Meldt ferdig!'); invalidate(); },
         onError: (e: any) => toast.error(e.response?.data?.error || 'Feil'),
     });
 
     const checklistMutation = useMutation({
         mutationFn: ({ itemId, val }: { itemId: string; val: boolean }) =>
-            mainLink.patch(`/api/safepay/orders/${orderId}/provider-checklist/${itemId}`, { providerCompleted: val }),
+            updateProviderChecklistItem(orderId!, itemId, val),
         onSuccess: () => invalidate(),
         onError: (e: any) => toast.error(e.response?.data?.error || 'Feil'),
     });
@@ -217,9 +223,7 @@ const ProviderOrderDetailPage: React.FC = () => {
             tabFiles.forEach((pf) => fd.append('files', pf.file));
             if (completionNote) fd.append('completionNote', completionNote);
             fd.append('evidenceType', evidenceTab);
-            return mainLink.post(`/api/safepay/orders/${orderId}/evidence`, fd, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
+            return uploadOrderEvidence(orderId!, fd);
         },
         onSuccess: () => {
             toast.success('Bevis lastet opp!');
@@ -232,8 +236,8 @@ const ProviderOrderDetailPage: React.FC = () => {
     });
 
     const removeUploadedMutation = useMutation({
-        mutationFn: async ({ url, evidenceType }: { url: string; evidenceType: EvidenceTab }) =>
-            mainLink.delete(`/api/safepay/orders/${orderId}/evidence`, { data: { url, evidenceType } }),
+        mutationFn: ({ url, evidenceType }: { url: string; evidenceType: EvidenceTab }) =>
+            removeOrderEvidence(orderId!, url, evidenceType),
         onSuccess: () => {
             toast.success('Bilde fjernet');
             invalidate();
@@ -243,14 +247,12 @@ const ProviderOrderDetailPage: React.FC = () => {
 
     // Dispute mutation
     const disputeMutation = useMutation({
-        mutationFn: async () => {
-            const res = await mainLink.post(`/api/safepay/contract/${orderId}/dispute`, {
+        mutationFn: () =>
+            openOrderDispute(orderId!, {
                 reasonCategory: disputeForm.reasonCategory,
                 title: disputeForm.title.trim(),
                 description: disputeForm.description.trim(),
-            });
-            return res.data;
-        },
+            }),
         onSuccess: () => {
             toast.success('Tvisten er opprettet. Du finner status og meldinger på denne siden.');
             refetchDispute();
@@ -272,8 +274,8 @@ const ProviderOrderDetailPage: React.FC = () => {
     const { data: existingReviews } = useQuery({
         queryKey: ['order-reviews', orderId],
         queryFn: async () => {
-            const res = await mainLink.get(`/api/orders/${orderId}/review`);
-            return Array.isArray(res.data) ? res.data : res.data ? [res.data] : [];
+            const res = await getReviewByOrder(orderId!);
+            return Array.isArray(res) ? res : res ? [res] : [];
         },
         enabled: !!orderId,
     });
@@ -283,17 +285,15 @@ const ProviderOrderDetailPage: React.FC = () => {
     );
 
     const reviewMutation = useMutation({
-        mutationFn: async () => {
-            const res = await mainLink.post('/api/reviews', {
-                orderId,
+        mutationFn: () =>
+            createReview({
+                orderId: orderId!,
                 serviceId: data?.order?.serviceId?._id,
                 revieweeId: data?.order?.customerId?._id,
                 revieweeRole: 'seeker',
                 rating: reviewRating,
                 comment: reviewComment,
-            });
-            return res.data;
-        },
+            }),
         onSuccess: () => {
             toast.success('Vurdering sendt!');
             setShowReviewForm(false);

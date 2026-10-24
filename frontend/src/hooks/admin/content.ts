@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    fetchFeatureFlags, toggleFeatureFlag,
     fetchAllConfigs, updateConfig,
     fetchHomepageContent, updateHomepageContent,
     fetchNavigation, updateNavigation,
@@ -9,18 +8,6 @@ import {
     fetchMaintenanceMode, toggleMaintenanceMode,
 } from '../../api/admin/content';
 import { toast } from 'react-hot-toast';
-
-export const useFeatureFlags = () =>
-    useQuery({ queryKey: ['admin', 'feature-flags'], queryFn: fetchFeatureFlags });
-
-export const useToggleFeatureFlag = () => {
-    const qc = useQueryClient();
-    return useMutation({
-        mutationFn: ({ key, enabled }: { key: string; enabled: boolean }) => toggleFeatureFlag(key, enabled),
-        onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin', 'feature-flags'] }); toast.success('Funksjonsflagg oppdatert.'); },
-        onError: () => toast.error('Kunne ikke oppdatere funksjonsflagg.'),
-    });
-};
 
 export const useAllConfigs = () =>
     useQuery({ queryKey: ['admin', 'config'], queryFn: fetchAllConfigs });

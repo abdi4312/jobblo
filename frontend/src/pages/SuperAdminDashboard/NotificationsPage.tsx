@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, Info, AlertTriangle, Tag, Plus, X } from 'lucide-react';
 import {
   Button,
   Space,
   Tag as AntTag,
   Typography,
-  Modal,
   Form,
   Input,
   Select,
   message,
 } from 'antd';
-import mainLink from '../../api/mainURLs';
+import { fetchSystemHistory, sendSystemNotification } from '../../api/admin';
 import ConfirmDialog from '../../components/Ui/ConfirmDialog';
 import { AdminTable } from '../../components/Ui/AdminTable';
 
@@ -19,12 +19,19 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 
 const NotificationsPage = () => {
-  const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [history, setHistory] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const queryClient = useQueryClient();
+  const historyQuery = useQuery({
+    queryKey: ['admin', 'system-history', page],
+    queryFn: () => fetchSystemHistory(page),
+    placeholderData: keepPreviousData,
+  });
+  const history = historyQuery.data?.data ?? [];
+  const totalPages = historyQuery.data?.totalPages ?? 1;
+  const historyLoading = historyQuery.isFetching;
+  const sendMutation = useMutation({ mutationFn: sendSystemNotification });
+  const loading = sendMutation.isPending;
   const [sendConfirm, setSendConfirm] = useState<{ visible: boolean; data: any }>({
     visible: false,
     data: null,
@@ -58,45 +65,26 @@ const NotificationsPage = () => {
     },
   ];
 
-  const fetchHistory = async (pageNum = 1) => {
-    try {
-      setHistoryLoading(true);
-      const response = await mainLink.get(`/api/admin/system-history?page=${pageNum}&limit=5`);
-      setHistory(response.data.data);
-      setTotalPages(response.data.totalPages);
-      setPage(response.data.currentPage);
-    } catch (error) {
-      console.error('History fetch error:', error);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchHistory();
-  }, []);
-
   const handleSendConfirm = async (values: any) => {
     setSendConfirm({ visible: true, data: values });
   };
 
   const handleSubmit = async () => {
-    setLoading(true);
     try {
-      const response = await mainLink.post('/api/notifications/system', {
+      const data = await sendMutation.mutateAsync({
         ...sendConfirm.data,
         isSystem: true,
         userId: null,
       });
-      message.success(response.data.message);
+      message.success(data.message);
       form.resetFields();
       setShowForm(false);
-      fetchHistory(1);
+      setPage(1);
+      queryClient.invalidateQueries({ queryKey: ['admin', 'system-history'] });
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
       message.error(err.response?.data?.error || 'Failed to send');
     } finally {
-      setLoading(false);
       setSendConfirm({ visible: false, data: null });
     }
   };
@@ -137,7 +125,7 @@ const NotificationsPage = () => {
   ];
 
   const topSection = showForm ? (
-    <div className="w-full mb-6 p-6 bg-gray-50 rounded-xl">
+    <div className="w-full mb-6 p-6 bg-muted/50 rounded-md">
       <Form
         form={form}
         layout="vertical"
@@ -187,7 +175,7 @@ const NotificationsPage = () => {
           current: page,
           pageSize: 5,
           total: totalPages * 5,
-          onChange: (p) => fetchHistory(p),
+          onChange: (p) => setPage(p),
         }}
         extra={
           <Button

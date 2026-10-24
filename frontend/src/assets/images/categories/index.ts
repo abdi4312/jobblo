@@ -92,7 +92,7 @@ export const SERVICE_SHOWCASE = [
 ] as const;
 
 /** The order used when a job carries no category we recognise. */
-export const CATEGORY_FALLBACKS = [
+const CATEGORY_FALLBACKS = [
   maling,
   rengjoring,
   hagearbeid,

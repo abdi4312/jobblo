@@ -30,18 +30,11 @@ export function AdminChartCard({
     className,
 }: AdminChartCardProps) {
     return (
-        <div
-            className={cn(
-                'bg-white rounded-[20px] border border-[#e7ebe5] p-5 md:p-6 flex flex-col gap-5 shadow-[0_2px_10px_rgba(24,49,38,0.025)]',
-                className
-            )}
-        >
+        <div className={cn('flex flex-col gap-4 rounded-lg border bg-card p-4 shadow-xs', className)}>
             <div className="flex items-start justify-between gap-2">
                 <div>
-                    <h3 className="text-[15px] font-semibold text-[#20382d]">{title}</h3>
-                    {description && (
-                        <p className="text-xs text-[#87928a] mt-1">{description}</p>
-                    )}
+                    <h3 className="text-sm font-medium text-foreground">{title}</h3>
+                    {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
                 </div>
                 {action && <div className="shrink-0">{action}</div>}
             </div>

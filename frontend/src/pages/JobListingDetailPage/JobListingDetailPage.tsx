@@ -43,10 +43,9 @@ import OrderRequestModal from '../../components/job/OrderRequestModal';
 import ReportJobModal from '../../components/job/ReportJobModal';
 import { submitUserJobReport } from '../../api/admin/jobReports';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import mainLink from '../../api/mainURLs';
+import { getConnectStatus, getContactEntitlements, getExtraContactStatus } from '../../api/stripeAPI';
 
-import { usePlans } from '../../features/plans/hooks';
-import { getConfigByKey } from '../../features/plans/api';
+import { useConfigByKey, usePlans } from '../../features/plans/hooks';
 
 const DEFAULT_SHARE_IMAGE = `${SITE_URL}/assets/share-image.png`;
 
@@ -169,13 +168,13 @@ const JobListingDetailPage = () => {
     remainingIncludedContacts: number;
   }, AxiosError<{ code?: string }>>({
     queryKey: ['v2-contact-entitlements', currentUser?._id],
-    queryFn: async () => (await mainLink.get('/api/stripe/v2/entitlements')).data,
+    queryFn: getContactEntitlements,
     enabled: isAuth,
     retry: false,
   });
   const connectStatusQuery = useQuery({
     queryKey: ['connect-readiness', currentUser?._id],
-    queryFn: async () => (await mainLink.get('/api/connect/status')).data,
+    queryFn: () => getConnectStatus(),
     enabled: isAuth,
     staleTime: 0,
     refetchOnWindowFocus: true,
@@ -201,7 +200,7 @@ const JobListingDetailPage = () => {
     (includedContactLimit !== undefined && includedContactsUsed !== undefined
       ? Math.max(0, includedContactLimit - includedContactsUsed)
       : undefined);
-  const [freeJobsToggle, setFreeJobsToggle] = useState(false);
+  const freeJobsToggle = useConfigByKey('FREE_PRIVATE_JOBS_UNDER_10000').data?.value === true;
 
   const {
     isFavorited,
@@ -228,7 +227,7 @@ const JobListingDetailPage = () => {
     (async () => {
       for (let attempt = 0; attempt < 10 && !cancelled; attempt += 1) {
         try {
-          const { data } = await mainLink.get<{ status: string }>(`/api/stripe/extra-contact-status/${sessionId}`);
+          const data = await getExtraContactStatus(sessionId);
           if (data.status === 'paid') {
             toast.success('Ekstra kontakt er betalt. Send forespørselen nå.');
             setIsOrderModalOpen(true);
@@ -249,18 +248,6 @@ const JobListingDetailPage = () => {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuth]);
-
-  useEffect(() => {
-    const fetchConfig = async () => {
-      try {
-        const config = await getConfigByKey('FREE_PRIVATE_JOBS_UNDER_10000');
-        setFreeJobsToggle(config?.value === true);
-      } catch (err) {
-        console.error('Error fetching free jobs config:', err);
-      }
-    };
-    fetchConfig();
-  }, []);
 
   useEffect(() => {
     if (isAuth && currentUser && plans && jobRequests && job) {
