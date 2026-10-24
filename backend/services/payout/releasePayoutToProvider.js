@@ -753,4 +753,39 @@ async function releasePayoutToProvider(opts) {
   return { payout, transfer, alreadyPaid: false };
 }
 
-module.exports = releasePayoutToProvider;
+// Refusals that leave money held on the platform until a person reconciles it. They
+// throw before any Payout row exists, so retryFailedPayouts never sees them — without a
+// durable record the funds sit silently (order 6a982fc4…: PAYOUT_MODE_UNKNOWN, no log).
+const NEEDS_RECONCILIATION = new Set([
+  'PAYOUT_MODE_UNKNOWN',
+  'PAYOUT_MODE_MISMATCH',
+  'PAYOUT_AMOUNT_INVALID',
+  'PAYOUT_ORDER_INVALID',
+  'PAYOUT_SOURCE_PAYMENT_UNVERIFIED',
+  'PAYOUT_SOURCE_PAYMENT_MISMATCH',
+  'PAYOUT_SOURCE_PAYMENT_INTENT_INVALID',
+  'PAYOUT_SOURCE_CHARGE_INVALID',
+]);
+
+/** Every caller goes through here, so a held-funds refusal is always recorded once. */
+async function releasePayoutToProviderLogged(opts) {
+  try {
+    return await releasePayoutToProvider(opts);
+  } catch (err) {
+    if (NEEDS_RECONCILIATION.has(err.code) && mongoose.connection.readyState === 1) {
+      await require('../../utils/errorLogger').logApplicationError({
+        error: err,
+        requestPath: `payout/${opts?.releaseSource || 'unknown'}`,
+        httpMethod: 'POST',
+        httpStatus: 409,
+        errorCode: err.code,
+        source: 'payout',
+        metadata: { orderId: String(opts?.orderId || ''), releaseSource: opts?.releaseSource, needsReconciliation: true },
+      });
+    }
+    throw err;
+  }
+}
+
+module.exports = releasePayoutToProviderLogged;
+module.exports.NEEDS_RECONCILIATION = NEEDS_RECONCILIATION;

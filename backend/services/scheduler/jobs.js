@@ -4,6 +4,7 @@ const Payout = require('../../models/Payout');
 const { getStripeConfiguration, getStripeForMode } = require('../../config/stripe');
 const { reconcileConnectedAccountsBatch } = require('../stripe/financialHistory');
 const Dispute = require('../../models/Dispute');
+const SafePayHistory = require('../../models/SafePayHistory');
 const Notification = require('../../models/Notification');
 const { logApplicationError } = require('../../utils/errorLogger');
 const { notify } = require('../../services/notifications');
