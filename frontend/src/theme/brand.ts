@@ -15,13 +15,15 @@
  * from outside the logo is Vipps' orange, which is brand mandated on their button.
  */
 
+import { LIGHT } from './tokens';
+
 // ── Colour ───────────────────────────────────────────────────────────────────
-export const INK = '#0B0B0B';
-export const INK_MUTED = '#63665F';
-export const INK_FAINT = '#9B9E96';
-export const GREEN = '#2E6641';
-export const GREEN_DARK = '#255335';
-export const LEAF = '#347028';
+export const INK = LIGHT.ink;
+export const INK_MUTED = LIGHT.inkMuted;
+export const INK_FAINT = LIGHT.inkFaint;
+export const GREEN = LIGHT.brand;
+export const GREEN_DARK = LIGHT.brandHover;
+export const LEAF = LIGHT.leaf;
 /**
  * The stem green taken down to near-black — the darkest surface on the site.
  *
@@ -32,16 +34,16 @@ export const LEAF = '#347028';
  * it is dark enough to keep every foreground token well clear of AA — #EFF0EA lands at
  * 13.3:1, GREEN_ON_INK at 7.4:1 and INK_FAINT at 5.6:1.
  */
-export const GREEN_DEEP = '#122A1C';
+export const GREEN_DEEP = LIGHT.brandDeep;
 
 /** The stem green lifted for legibility on the GREEN_DEEP section. */
-export const GREEN_ON_INK = '#8FBF9A';
+export const GREEN_ON_INK = LIGHT.brandOnDeep;
 /** The stem green at 12 % — the tint behind icon plates and SafePay badges. */
-export const GREEN_MIST = '#EAF1E9';
-export const LINE = '#E6E7E1';
-export const SURFACE = '#F5F6F1';
-export const PANEL = '#F4F6F0';
-export const PAGE = '#EFF0EA';
+export const GREEN_MIST = LIGHT.tint;
+export const LINE = LIGHT.line;
+export const SURFACE = LIGHT.surfaceAlt;
+export const PANEL = LIGHT.surface2;
+export const PAGE = LIGHT.page;
 
 // ── Layout ───────────────────────────────────────────────────────────────────
 /**
