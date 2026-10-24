@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import mainLink from '../../api/mainURLs';
+import { useMutation } from '@tanstack/react-query';
+import { createSupportTicket } from '../../api/supportAPI';
 import { useUserStore } from '../../stores/userStore';
 import { getErrorMessage } from '../../utils/getErrorMessage';
 import {
@@ -28,7 +29,8 @@ export default function SupportPage() {
   const [openId, setOpenId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState<FormState>({ subject: '', message: '', email: '' });
-  const [sending, setSending] = useState(false);
+  const ticketMutation = useMutation({ mutationFn: createSupportTicket });
+  const sending = ticketMutation.isPending;
   const currentUser = useUserStore((state) => state.user);
   const [sent, setSent] = useState(false);
 
@@ -57,9 +59,8 @@ export default function SupportPage() {
       return;
     }
 
-    setSending(true);
     try {
-      await mainLink.post('/api/support/tickets', {
+      await ticketMutation.mutateAsync({
         subject: form.subject.trim(),
         message: form.message.trim(),
         ...(currentUser ? {} : { email: form.email.trim() }),
@@ -68,8 +69,6 @@ export default function SupportPage() {
       setForm({ subject: '', message: '', email: '' });
     } catch (err) {
       toast.error(getErrorMessage(err, 'Kunne ikke sende saken. Prøv igjen.'));
-    } finally {
-      setSending(false);
     }
   };
 

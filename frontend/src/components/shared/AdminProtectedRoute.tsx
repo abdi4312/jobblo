@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useUserStore } from '../../stores/userStore';
 import { AuthPending } from './ProtectedRoute';
+import { MfaGate } from './MfaGate';
 
 /**
  * Guards all /dashboard routes.
@@ -25,5 +26,6 @@ export const AdminProtectedRoute = ({ children }: { children: JSX.Element }) => 
     return <Navigate to="/profile" replace />;
   }
 
-  return children;
+  // Authenticator-app code, required by the backend for this role.
+  return <MfaGate>{children}</MfaGate>;
 };

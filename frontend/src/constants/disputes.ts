@@ -42,7 +42,7 @@ export const disputeReasonOptions = (role: DisputeViewerRole): ReasonOption[] =>
   ...SHARED_REASONS,
 ];
 
-export const DISPUTE_STATUS_LABELS: Record<string, string> = {
+const DISPUTE_STATUS_LABELS: Record<string, string> = {
   open: 'Åpen',
   under_review: 'Under behandling',
   waiting_for_customer: 'Venter på deg som oppdragsgiver',
@@ -55,7 +55,7 @@ export const DISPUTE_STATUS_LABELS: Record<string, string> = {
 };
 
 /** Statuses where either party can still add a message (mirrors disputeController). */
-export const ACTIVE_DISPUTE_STATUSES = [
+const ACTIVE_DISPUTE_STATUSES = [
   'open',
   'under_review',
   'waiting_for_customer',

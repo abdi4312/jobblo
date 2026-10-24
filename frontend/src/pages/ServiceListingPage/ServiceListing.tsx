@@ -26,7 +26,8 @@ const MapComponent = lazy(() =>
 );
 import { useJobs } from '../../features/jobsList/hooks';
 import { useFilterOptions } from '../../features/jobsList/filterHooks';
-import { getLocationTree, getLocationStats, type LocationNode } from '../../api/locationAPI';
+import type { LocationNode } from '../../api/locationAPI';
+import { useLocationStats, useLocationTree } from '../../features/locations/hooks';
 
 /**
  * The tick in the area tree.
@@ -46,6 +47,8 @@ const Box = ({ checked }: { checked: boolean }) => (
     {checked && <Check size={11} strokeWidth={3.5} />}
   </span>
 );
+
+const NO_LOCATIONS: LocationNode[] = [];
 
 const ServiceListing = () => {
   const { categoryName } = useParams();
@@ -88,14 +91,16 @@ const ServiceListing = () => {
       : null);
 
   // New location filter states
-  const [locationTree, setLocationTree] = useState<LocationNode[]>([]);
-  const [locationStats, setLocationStats] = useState<any>(null);
+  const { data: locationTreeData, isLoading: isTreeLoading } = useLocationTree();
+  const locationTree: LocationNode[] = locationTreeData ?? NO_LOCATIONS;
+  const { data: locationStatsData, isLoading: isStatsLoading } = useLocationStats();
+  const locationStats: any = locationStatsData ?? null;
+  const isLoadingLocations = isTreeLoading || isStatsLoading;
   const [selectedCountyCodes, setSelectedCountyCodes] = useState<string[]>([]);
   const [selectedMunicipalityCodes, setSelectedMunicipalityCodes] = useState<string[]>([]);
   const [selectedAreaCodes, setSelectedAreaCodes] = useState<string[]>([]);
   const [expandedCounties, setExpandedCounties] = useState<string[]>([]);
   const [expandedMunicipalities, setExpandedMunicipalities] = useState<string[]>([]);
-  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { data: filterOptions, isLoading: isFiltersLoading } = useFilterOptions();
@@ -128,23 +133,6 @@ const ServiceListing = () => {
     selectedSort,
     initialSearch,
   ]);
-
-  // Fetch location data on mount
-  useEffect(() => {
-    const fetchLocations = async () => {
-      setIsLoadingLocations(true);
-      try {
-        const [tree, stats] = await Promise.all([getLocationTree(), getLocationStats()]);
-        setLocationTree(tree);
-        setLocationStats(stats);
-      } catch (err) {
-        console.error('Failed to fetch location data:', err);
-      } finally {
-        setIsLoadingLocations(false);
-      }
-    };
-    fetchLocations();
-  }, []);
 
   const {
     data,

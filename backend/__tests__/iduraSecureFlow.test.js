@@ -324,7 +324,11 @@ describe('verification state reaches the frontend, safely', () => {
 });
 
 describe('the session store does not collide with the auth Session collection', () => {
-  const appSource = stripComments(fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8'));
+  // The store is built in config/session.js; app.js mounts it.
+  const appSource = stripComments(fs.readFileSync(path.join(ROOT, 'config', 'session.js'), 'utf8'));
+  it('app.js mounts that session middleware', () => {
+    expect(stripComments(fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8'))).toMatch(/app\.use\(sessionMiddleware\(\)\)/);
+  });
   const sessionModel = stripComments(
     fs.readFileSync(path.join(ROOT, 'models', 'Session.js'), 'utf8')
   );

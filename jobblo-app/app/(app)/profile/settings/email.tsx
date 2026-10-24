@@ -5,9 +5,9 @@ import { AtSign, CheckCircle2, Info } from 'lucide-react-native';
 import { useProfile, useUpdateProfile } from '../../../../src/hooks/useProfile';
 import { useAuthStore } from '../../../../src/store/authStore';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
-import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
 import { TC, tc } from '../../../../src/theme/colors';
+import { SingleFieldSkeleton } from '../../../../src/components/skeletons/ScreenSkeletons';
 
 /**
  * Email settings — the account's login e-mail.
@@ -123,7 +123,7 @@ export default function EmailSettingsScreen() {
   if (isLoading || draft === null) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator message="Laster e-postadresse..." />
+        <SingleFieldSkeleton />
       </SafeAreaView>
     );
   }

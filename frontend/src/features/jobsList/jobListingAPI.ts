@@ -22,7 +22,7 @@ interface FetchJobsParams {
   radius?: number;
 }
 
-export interface JobsResponse {
+interface JobsResponse {
   data: Jobs[];
   pagination: {
     total: number;
@@ -97,4 +97,9 @@ export const fetchJobs = async ({
     data: rawList,
     pagination,
   };
+};
+
+export const getFilterOptions = async () => {
+  const res = await mainLink.get('/api/filter/options');
+  return res.data.filters;
 };

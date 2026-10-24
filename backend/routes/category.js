@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const categoryController = require('../controllers/categoryController');
 const { authenticate, requireAdmin } = require('../middleware/auth');
+const { cacheJson } = require('../utils/cache');
 /**
  * @swagger
  * components:
@@ -89,7 +90,7 @@ router.post('/', authenticate, requireAdmin, categoryController.createCategory);
  *               items:
  *                 $ref: '#/components/schemas/Category'
  */
-router.get('/', categoryController.getAllCategories);
+router.get('/', cacheJson('categories', 300), categoryController.getAllCategories);
 
 /**
  * @swagger

@@ -22,14 +22,14 @@ export interface AdminJobReportItem {
     updatedAt: string;
 }
 
-export interface AdminJobReportDetail extends AdminJobReportItem {
+interface AdminJobReportDetail extends AdminJobReportItem {
     serviceId: { _id: string; title: string; description?: string; price?: number; status?: string; images?: string[]; location?: unknown; createdAt?: string } | null;
     resolvedBy: { _id: string; name: string; email: string } | null;
     resolutionNote: string | null;
     resolvedAt: string | null;
 }
 
-export interface AdminJobReportsSummary {
+interface AdminJobReportsSummary {
     open: number;
     under_review: number;
     resolved: number;
@@ -39,7 +39,7 @@ export interface AdminJobReportsSummary {
     total: number;
 }
 
-export interface AdminJobReportsQuery {
+interface AdminJobReportsQuery {
     page?: number;
     limit?: number;
     status?: string;
@@ -92,7 +92,7 @@ export const updateJobReportStatus = async (
     return res.data.data.report;
 };
 
-export interface SubmitJobReportPayload {
+interface SubmitJobReportPayload {
     reportType: string;
     description: string;
 }

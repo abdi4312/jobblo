@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   userLogin,
   registerUser,
-  logoutUser,
   getUserSessions,
   revokeSession,
   revokeAllOtherSessions,
@@ -27,12 +26,12 @@ export const useAuth = () => {
   // this, anyone following a shared job link, a notification or a checkout link
   // was sent to /home after logging in and lost what they were trying to do.
   // Only same-origin paths are honoured so a crafted state can't redirect off-site.
-  const redirectAfterAuth = (): string => {
+  const redirectAfterAuth = (fallback = '/home'): string => {
     const from = (location.state as { from?: unknown } | null)?.from;
     if (typeof from === 'string' && from.startsWith('/') && !from.startsWith('//')) {
       return from;
     }
-    return '/home';
+    return fallback;
   };
 
   // Note: Don't auto-logout here during rehydration - let the interceptor handle token issues
@@ -44,7 +43,7 @@ export const useAuth = () => {
       queryClient.setQueryData(['profile'], data.user);
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
       toast.success(`Velkommen tilbake, ${data.user.name}!`);
-      navigate(redirectAfterAuth(), { replace: true });
+      navigate(redirectAfterAuth(data.user.role === 'developer' ? '/developer' : '/home'), { replace: true });
     },
     onError: (error: unknown) => {
       // getErrorMessage also handles the object-shaped envelope from the Express

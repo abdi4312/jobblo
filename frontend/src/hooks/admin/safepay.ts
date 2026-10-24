@@ -17,9 +17,6 @@ const keys = {
 export const useSafePayList = (q: SafePayQuery) =>
     useQuery({ queryKey: keys.safePayList(q), queryFn: () => safePayApi.fetchSafePayList(q), staleTime: 20_000, placeholderData: (p) => p });
 
-export const useSafePaySummary = () =>
-    useQuery({ queryKey: keys.safePaySummary(), queryFn: safePayApi.fetchSafePaySummary, staleTime: 30_000 });
-
 export const useSafePayFinanceSummary = (mode: SafePayFinanceSummary['mode']) =>
     useQuery({
         queryKey: keys.safePayFinanceSummary(mode),

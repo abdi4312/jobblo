@@ -47,5 +47,3 @@ export function PageLoader({ label = 'Laster …' }: { label?: string }) {
     </div>
   );
 }
-
-export default PageLoader;

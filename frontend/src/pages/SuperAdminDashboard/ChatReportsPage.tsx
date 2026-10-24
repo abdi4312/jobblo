@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Eye, MessageSquare, UserCheck, AlertTriangle, Shield, Clock, CheckCircle2, XCircle } from 'lucide-react';
@@ -6,7 +6,6 @@ import { toast } from 'react-hot-toast';
 import {
     fetchAdminChatReports,
     assignChatReport,
-    updateChatReportPriority,
 } from '../../api/admin/chats';
 import type { AdminChatReportItem } from '../../api/admin/chats';
 import {
@@ -38,7 +37,7 @@ const PRIORITY_OPTIONS = [
 ];
 
 const PRIORITY_COLOR: Record<string, string> = {
-    low: 'text-gray-500 bg-gray-50',
+    low: 'text-muted-foreground bg-muted/50',
     medium: 'text-yellow-600 bg-yellow-50',
     high: 'text-orange-600 bg-orange-50',
     urgent: 'text-red-700 bg-red-100',
@@ -100,7 +99,7 @@ export default function ChatReportsPage() {
             render: (r) => (
                 <Link
                     to={`/dashboard/chat-reports/${r._id}`}
-                    className="font-mono text-xs text-[#2d4a3e] hover:underline"
+                    className="font-mono text-xs text-primary hover:underline"
                 >
                     {r._id.slice(-8).toUpperCase()}
                 </Link>
@@ -112,11 +111,11 @@ export default function ChatReportsPage() {
             render: (r) => {
                 const cid = typeof r.chatId === 'object' ? r.chatId._id : r.chatId;
                 return cid ? (
-                    <span className="font-mono text-xs text-gray-500">
+                    <span className="font-mono text-xs text-muted-foreground">
                         {cid.slice(0, 8)}…{cid.slice(-4)}
                     </span>
                 ) : (
-                    <span className="text-gray-400">–</span>
+                    <span className="text-muted-foreground">–</span>
                 );
             },
         },
@@ -126,11 +125,11 @@ export default function ChatReportsPage() {
             render: (r) =>
                 r.reportedBy ? (
                     <div>
-                        <p className="text-sm text-gray-800">{r.reportedBy.name}</p>
-                        <p className="text-xs text-gray-400">{r.reportedBy.email}</p>
+                        <p className="text-sm text-foreground">{r.reportedBy.name}</p>
+                        <p className="text-xs text-muted-foreground">{r.reportedBy.email}</p>
                     </div>
                 ) : (
-                    <span className="text-gray-400">–</span>
+                    <span className="text-muted-foreground">–</span>
                 ),
         },
         {
@@ -139,25 +138,25 @@ export default function ChatReportsPage() {
             render: (r) =>
                 r.reportedUser ? (
                     <div>
-                        <p className="text-sm text-gray-800">{r.reportedUser.name}</p>
-                        <p className="text-xs text-gray-400">{r.reportedUser.email}</p>
+                        <p className="text-sm text-foreground">{r.reportedUser.name}</p>
+                        <p className="text-xs text-muted-foreground">{r.reportedUser.email}</p>
                     </div>
                 ) : (
-                    <span className="text-gray-400">–</span>
+                    <span className="text-muted-foreground">–</span>
                 ),
         },
         {
             key: 'reportType',
             header: 'Type',
             render: (r) => (
-                <span className="text-xs text-gray-600">{r.reportType.replace(/_/g, ' ')}</span>
+                <span className="text-xs text-muted-foreground">{r.reportType.replace(/_/g, ' ')}</span>
             ),
         },
         {
             key: 'scope',
             header: 'Omfang',
             render: (r) => (
-                <span className="text-xs capitalize text-gray-500">{r.scope}</span>
+                <span className="text-xs capitalize text-muted-foreground">{r.scope}</span>
             ),
         },
         {
@@ -182,7 +181,7 @@ export default function ChatReportsPage() {
             header: 'Tildelt',
             render: (r) =>
                 r.assignedAdminId ? (
-                    <span className="text-xs text-gray-700">{r.assignedAdminId.name}</span>
+                    <span className="text-xs text-foreground">{r.assignedAdminId.name}</span>
                 ) : (
                     <span className="text-xs text-orange-500">Ikke tildelt</span>
                 ),
@@ -215,7 +214,7 @@ export default function ChatReportsPage() {
                         {chatId && (
                             <Link
                                 to={`/dashboard/chat-review?chatId=${chatId}&reportId=${r._id}&source=report`}
-                                className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-[#2d4a3e] bg-[#eef5f2] hover:bg-[#d7ece4] rounded-lg transition-colors"
+                                className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/15 rounded-lg transition-colors"
                             >
                                 <MessageSquare size={11} aria-hidden="true" /> Gjennomgå chat
                             </Link>

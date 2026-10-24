@@ -11,7 +11,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import mainLink from '../../api/mainURLs';
+import { createCheckoutSession, getCheckoutDetails } from '../../api/safePayAPI';
 import { toast } from 'react-hot-toast';
 import SafePaySteps from '../../components/SafePay/SafePaySteps';
 import { useUserStore } from '../../stores/userStore';
@@ -135,18 +135,12 @@ const SafePayCheckout: React.FC = () => {
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['safepay-checkout', orderId],
-    queryFn: async () => {
-      const res = await mainLink.get(`/api/safepay-checkout/details/${orderId}`);
-      return res.data;
-    },
+    queryFn: () => getCheckoutDetails(orderId!),
     enabled: !!orderId,
   });
 
   const paymentMutation = useMutation({
-    mutationFn: async () => {
-      const res = await mainLink.post('/api/safepay-checkout/create-session', { orderId });
-      return res.data;
-    },
+    mutationFn: () => createCheckoutSession(orderId),
     onSuccess: (res) => {
       if (res?.url) {
         window.location.href = res.url;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { CreditCard, CheckCircle2, XCircle, Clock, RotateCcw } from 'lucide-react';
 import { useAdminTransactions } from '../../hooks/admin';
 import type { AdminTransactionsQuery, AdminTransaction } from '../../api/admin';
@@ -62,8 +62,8 @@ export default function TransactionsPage() {
       header: 'Bruker',
       render: (t) => (
         <div>
-          <p className="text-sm font-medium text-gray-800">{t.userId?.name ?? '–'}</p>
-          <p className="text-xs text-gray-400">{t.userId?.email ?? ''}</p>
+          <p className="text-sm font-medium text-foreground">{t.userId?.name ?? '–'}</p>
+          <p className="text-xs text-muted-foreground">{t.userId?.email ?? ''}</p>
         </div>
       ),
     },
@@ -72,8 +72,8 @@ export default function TransactionsPage() {
       header: 'Plan',
       render: (t) => (
         <div>
-          <p className="text-sm text-gray-700">{t.planName}</p>
-          <p className="text-xs text-gray-400 capitalize">{t.planType}</p>
+          <p className="text-sm text-foreground">{t.planName}</p>
+          <p className="text-xs text-muted-foreground capitalize">{t.planType}</p>
         </div>
       ),
     },
@@ -91,7 +91,7 @@ export default function TransactionsPage() {
       header: 'Beløp',
       render: (t) => (
         <div>
-          <p className="text-sm font-semibold text-gray-800">
+          <p className="text-sm font-semibold text-foreground">
             {t.amount.toLocaleString('nb-NO')} {t.currency.toUpperCase()}
           </p>
           {t.discountAmount > 0 && (
@@ -116,7 +116,7 @@ export default function TransactionsPage() {
       key: 'refunded',
       header: 'Refundert',
       render: (t) => (
-        <span className={`text-xs font-medium ${t.refunded ? 'text-purple-600' : 'text-gray-400'}`}>
+        <span className={`text-xs font-medium ${t.refunded ? 'text-purple-600' : 'text-muted-foreground'}`}>
           {t.refunded ? 'Ja' : 'Nei'}
         </span>
       ),
@@ -177,7 +177,7 @@ export default function TransactionsPage() {
       {data && !isLoading && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Totalt', value: data.pagination.total, icon: <CreditCard size={16} />, color: 'text-gray-600' },
+            { label: 'Totalt', value: data.pagination.total, icon: <CreditCard size={16} />, color: 'text-muted-foreground' },
             { label: 'Denne siden', value: data.transactions.length, icon: <CreditCard size={16} />, color: 'text-blue-600' },
             {
               label: 'Vellykket',
@@ -192,11 +192,11 @@ export default function TransactionsPage() {
               color: 'text-red-600',
             },
           ].map((s) => (
-            <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
+            <div key={s.label} className="bg-card rounded-md border border-border p-4 flex items-center gap-3">
               <span className={s.color}>{s.icon}</span>
               <div>
-                <p className="text-lg font-bold text-gray-900">{s.value}</p>
-                <p className="text-xs text-gray-400">{s.label}</p>
+                <p className="text-lg font-bold text-foreground">{s.value}</p>
+                <p className="text-xs text-muted-foreground">{s.label}</p>
               </div>
             </div>
           ))}

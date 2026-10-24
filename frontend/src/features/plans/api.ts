@@ -10,11 +10,6 @@ export const updatePlan = async (id: string, data: any) => {
   return res.data;
 };
 
-export const createPlan = async (data: any) => {
-  const res = await mainLink.post('/api/plans', data);
-  return res.data;
-};
-
 export const getConfigs = async () => {
   const res = await mainLink.get('/api/config');
   return res.data;

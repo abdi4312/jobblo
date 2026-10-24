@@ -136,5 +136,3 @@ export const MyListingCard = ({ service, onOpen, onDelete, isDeleting }: MyListi
     </article>
   );
 };
-
-export default MyListingCard;

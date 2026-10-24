@@ -13,7 +13,14 @@ import {
 } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { toast } from 'react-hot-toast';
-import mainLink from '../../../api/mainURLs';
+import {
+  cancelSubscription,
+  cancelSubscriptionChange,
+  getMySubscription,
+  getUserTransactions,
+  openSubscriptionPortal,
+  resumeSubscription,
+} from '../../../api/stripeAPI';
 import { ConfirmDialog } from '../../Ui/ConfirmDialog';
 
 const errorMessage = (error: unknown, fallback: string) =>
@@ -62,19 +69,16 @@ export function SubscriptionView() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['userTransactions', page],
-    queryFn: async () => {
-      const res = await mainLink.get(`/api/transactions/user?page=${page}&limit=5`);
-      return res.data;
-    },
+    queryFn: () => getUserTransactions(page),
   });
 
   const { data: currentSubscription, isLoading: isSubscriptionLoading } = useQuery<CurrentSubscription | null>({
     queryKey: ['my-subscription'],
-    queryFn: async () => (await mainLink.get<{ subscription: CurrentSubscription | null }>('/api/stripe/subscription')).data.subscription,
+    queryFn: getMySubscription,
   });
 
   const cancelMutation = useMutation({
-    mutationFn: async () => (await mainLink.post('/api/stripe/subscription/cancel')).data,
+    mutationFn: cancelSubscription,
     onSuccess: (result) => {
       toast.success(result?.message || 'Abonnementet avsluttes ved periodens slutt');
       queryClient.invalidateQueries({ queryKey: ['my-subscription'] });
@@ -82,7 +86,7 @@ export function SubscriptionView() {
     onError: (error: unknown) => toast.error(errorMessage(error, 'Kunne ikke si opp abonnementet')),
   });
   const resumeMutation = useMutation({
-    mutationFn: async () => (await mainLink.post('/api/stripe/subscription/resume')).data,
+    mutationFn: resumeSubscription,
     onSuccess: (result) => {
       toast.success(result?.message || 'Abonnementet fortsetter');
       queryClient.invalidateQueries({ queryKey: ['my-subscription'] });
@@ -90,7 +94,7 @@ export function SubscriptionView() {
     onError: (error: unknown) => toast.error(errorMessage(error, 'Kunne ikke gjenoppta abonnementet')),
   });
   const cancelPendingPlanMutation = useMutation({
-    mutationFn: async () => (await mainLink.post('/api/stripe/subscription/change/cancel')).data,
+    mutationFn: cancelSubscriptionChange,
     onSuccess: (result) => {
       toast.success(result?.message || 'Den planlagte nedgraderingen er avbrutt');
       queryClient.invalidateQueries({ queryKey: ['my-subscription'] });
@@ -99,7 +103,7 @@ export function SubscriptionView() {
       toast.error(errorMessage(error, 'Kunne ikke avbryte planendringen')),
   });
   const portalMutation = useMutation({
-    mutationFn: async () => (await mainLink.post('/api/stripe/subscription/portal')).data,
+    mutationFn: openSubscriptionPortal,
     onSuccess: (result) => {
       if (result?.url) window.location.assign(result.url);
       else toast.error('Kunne ikke åpne betalingsadministrasjonen.');

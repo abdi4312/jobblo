@@ -29,7 +29,8 @@ export function useTabBarSpace() {
  * Floating pill tab bar in Liquid Glass (FINN / iOS App Store style).
  * The active tab gets its own rounded highlight; badges come from each tab's icon.
  */
-export function GlassTabBar({ state, descriptors, navigation }: TabBarProps) {
+// expo-router 58 passes `emitter` + `navigateToTab` instead of `navigation` (same as its own BottomTabBar).
+export function GlassTabBar({ state, descriptors, emitter, navigateToTab }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const routes = state.routes.filter((route) => VISIBLE_TABS.includes(route.name));
   const dark = useColorScheme().colorScheme === 'dark';
@@ -79,14 +80,14 @@ export function GlassTabBar({ state, descriptors, navigation }: TabBarProps) {
             const color = focused ? TC.brandText : TC.ink2;
             const label = typeof options.title === 'string' ? options.title : route.name;
             const onPress = () => {
-              const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-              if (!focused && !event.defaultPrevented) navigation.navigate(route.name, route.params);
+              const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+              if (!focused && !event.defaultPrevented) navigateToTab(route.key);
             };
             return (
               <Pressable
                 key={route.key}
                 onPress={onPress}
-                onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
+                onLongPress={() => emitter.emit({ type: 'tabLongPress', target: route.key })}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: focused }}
                 accessibilityLabel={label}

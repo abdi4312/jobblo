@@ -154,7 +154,7 @@ describe('User.password is never selected by default', () => {
   });
 
   it('still lets password-verifying flows opt in explicitly', () => {
-    const src = fs.readFileSync(path.join(__dirname, '../controllers/authController.js'), 'utf8');
+    const src = fs.readdirSync(path.join(__dirname, '..', 'controllers', 'auth')).map((f) => fs.readFileSync(path.join(__dirname, '..', 'controllers', 'auth', f), 'utf8')).join('\n'); // the controller is split into controllers/auth
     // login
     expect(src).toMatch(/User\.findOne\(\{ email: normalizedEmail \}\)\.select\('\+password'\)/);
     // change-password (verifies currentPassword)

@@ -3,7 +3,6 @@ const Payment = require('../../models/Payment');
 const SafePayHistory = require('../../models/SafePayHistory');
 const Chat = require('../../models/ChatMessage');
 const Dispute = require('../../models/Dispute');
-const Notification = require('../../models/Notification');
 const { logActivity } = require('./activityService');
 const { notify } = require('../../services/notifications');
 
@@ -24,99 +23,8 @@ const PAYOUT_LOCK_LEASE_MS = 5 * 60 * 1000;
  * stuck.
  */
 const {
-  ORDER_TRANSITIONS,
   isValidTransition,
-  assertTerminalIsMoneySafe,
 } = require('../order/orderState');
-
-/**
- * Synchronize all related models when an order status changes.
- * Uses MongoDB session for atomicity.
- *
- * @param {object} options
- * @param {string} options.orderId
- * @param {string} options.newOrderStatus
- * @param {string} options.adminId - ID of the acting admin
- * @param {string} options.reason - Human-readable reason
- * @param {string} options.ip
- * @param {string} options.userAgent
- */
-/**
- * Synchronize all related models when an order status changes.
- * Sequential writes (no transactions) — works on standalone MongoDB.
- */
-async function syncSafePayStatus({ orderId, newOrderStatus, adminId, reason, ip, userAgent }) {
-  const order = await Order.findById(orderId);
-  if (!order) throw new Error('Ordre ikke funnet');
-
-  if (!isValidTransition(order.status, newOrderStatus)) {
-    throw new Error(`Ugyldig statusovergang: ${order.status} → ${newOrderStatus}`);
-  }
-
-  // An admin moving an order to a terminal state is still bound by the money
-  // invariant: completing without a payout, or cancelling without a refund, would
-  // leave captured money with no recorded destination. Disputes are resolved
-  // through resolveDispute, which records the outcome and passes it explicitly.
-  await assertTerminalIsMoneySafe(order, newOrderStatus);
-
-  const prev = order.status;
-  order.status = newOrderStatus;
-  order.history.push({
-    action: `admin_status_change`,
-    userId: adminId,
-    timestamp: new Date(),
-    data: { from: prev, to: newOrderStatus, reason },
-  });
-  await order.save();
-
-  // Synchronize Payment status
-  const paymentStatusMap = {
-    paid: 'completed',
-    in_progress: 'completed',
-    disputed: 'disputed',
-    completed: 'released',
-    cancelled: 'pending',
-  };
-  if (paymentStatusMap[newOrderStatus]) {
-    await Payment.findOneAndUpdate({ orderId }, { status: paymentStatusMap[newOrderStatus] });
-  }
-
-  // Synchronize Chat status
-  if (order.chatId) {
-    const chatStatusMap = {
-      paid: 'paid',
-      in_progress: 'in_progress',
-      disputed: 'disputed',
-      completed: 'completed',
-      cancelled: 'cancelled',
-    };
-    if (chatStatusMap[newOrderStatus]) {
-      await Chat.findByIdAndUpdate(order.chatId, { status: chatStatusMap[newOrderStatus] });
-    }
-  }
-
-  // Synchronize SafePayHistory
-  const historyStatusMap = {
-    disputed: 'disputed',
-    completed: 'completed',
-    cancelled: 'cancelled',
-  };
-  if (historyStatusMap[newOrderStatus]) {
-    await SafePayHistory.findOneAndUpdate({ orderId }, { status: historyStatusMap[newOrderStatus] });
-  }
-
-  await logActivity({
-    adminId,
-    action: 'order_updated',
-    targetModel: 'Order',
-    targetId: orderId,
-    description: `SafePay status synkronisert: ${prev} → ${newOrderStatus}. Årsak: ${reason}`,
-    ip,
-    userAgent,
-  });
-
-  return { success: true, prevStatus: prev, newStatus: newOrderStatus };
-}
 
 /**
  * Open a dispute for a SafePay contract.
@@ -291,4 +199,4 @@ async function openDispute({
   return dispute;
 }
 
-module.exports = { syncSafePayStatus, openDispute, isValidTransition, DISPUTE_ELIGIBLE_STATUSES };
+module.exports = { openDispute, isValidTransition, DISPUTE_ELIGIBLE_STATUSES };

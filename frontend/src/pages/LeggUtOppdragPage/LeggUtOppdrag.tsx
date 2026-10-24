@@ -1,5 +1,6 @@
 import CreateJobForm from '../../components/CreateJobForm/CreateJobForm';
-import mainLink from '../../api/mainURLs';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { saveServiceForm } from '../../features/services/api';
 import { useUserStore } from '../../stores/userStore';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -15,6 +16,15 @@ export default function LeggUtOppdrag() {
   const user = useUserStore((state) => state.user);
 
   const { data: job, isLoading } = useJobDetailQuery(id || '');
+  const queryClient = useQueryClient();
+  const saveMutation = useMutation({
+    mutationFn: (formData: FormData) => saveServiceForm(formData, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-services'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      if (id) queryClient.invalidateQueries({ queryKey: ['jobDetail', id] });
+    },
+  });
 
   if (!user) {
     return (
@@ -39,17 +49,7 @@ export default function LeggUtOppdrag() {
     console.log('Sending job data (FormData)');
 
     try {
-      const response = isEditMode
-        ? await mainLink.put(`/api/services/${id}`, formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          })
-        : await mainLink.post('/api/services', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          });
+      const response = await saveMutation.mutateAsync(formData);
 
       if (!response.data) {
         // Treat "no body" as a failure like any other, so the caller keeps the

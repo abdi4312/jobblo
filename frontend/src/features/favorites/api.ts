@@ -1,7 +1,7 @@
 import mainLink from '../../api/mainURLs';
 import type { FavoritesResponse, FavoriteItem } from './types/favorites.types';
 
-export const getFavorites = async (): Promise<FavoritesResponse> => {
+const getFavorites = async (): Promise<FavoritesResponse> => {
   const response = await mainLink.get('/api/favorites');
   return response.data;
 };

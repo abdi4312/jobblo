@@ -5,34 +5,11 @@ import App from '../App.tsx';
 import { ProtectedRoute } from '../components/shared/ProtectedRoute.tsx';
 import { PublicRoute } from '../components/shared/PublicRoute.tsx';
 import { AdminProtectedRoute } from '../components/shared/AdminProtectedRoute.tsx';
+import { DeveloperProtectedRoute } from '../components/shared/DeveloperProtectedRoute.tsx';
 import { SettingsLayout } from '../components/layout/SettingsLayout/SettingsLayout.tsx';
 import { RouteErrorElement } from '../components/ErrorBoundary.tsx';
 import { PageLoader } from '../components/Loading/PageLoader.tsx';
 
-import {
-  UsernameView,
-  NameView,
-  BioView,
-  PictureView,
-  BannerView,
-  EmailView,
-  PhoneView,
-  AddressesView,
-  PasswordView,
-  DeleteAccountView,
-  LocationView,
-  UpcomingPreviewView,
-  VisibilityView,
-  BlockedUsersView,
-  CookiesView,
-  SessionsView,
-  AboutView,
-  SubscriptionView,
-  NotificationsView,
-  SeekerSettingsView,
-  SafePayHistoryView,
-  PayoutSettingsView,
-} from '../components/profile/SettingsViews';
 
 import OAuthSuccess from '../pages/OAuthSuccess.tsx';
 import SettingsPage from '../pages/SettingsPage.tsx';
@@ -50,6 +27,33 @@ const withSuspense = (Component: React.ComponentType) => (
   </Suspense>
 );
 
+// Settings screens load with the settings area, not with every page: they pull in Google
+// Maps (addresses), the date picker (SafePay history) and the profile/SafePay components.
+const settingsView = (name: keyof typeof import('../components/profile/SettingsViews')) =>
+  lazy(() => import('../components/profile/SettingsViews').then((m) => ({ default: m[name] as React.ComponentType })));
+const UsernameView = settingsView('UsernameView');
+const NameView = settingsView('NameView');
+const BioView = settingsView('BioView');
+const PictureView = settingsView('PictureView');
+const BannerView = settingsView('BannerView');
+const EmailView = settingsView('EmailView');
+const PhoneView = settingsView('PhoneView');
+const AddressesView = settingsView('AddressesView');
+const PasswordView = settingsView('PasswordView');
+const DeleteAccountView = settingsView('DeleteAccountView');
+const LocationView = settingsView('LocationView');
+const UpcomingPreviewView = settingsView('UpcomingPreviewView');
+const VisibilityView = settingsView('VisibilityView');
+const BlockedUsersView = settingsView('BlockedUsersView');
+const CookiesView = settingsView('CookiesView');
+const SessionsView = settingsView('SessionsView');
+const AboutView = settingsView('AboutView');
+const SubscriptionView = settingsView('SubscriptionView');
+const NotificationsView = settingsView('NotificationsView');
+const SeekerSettingsView = settingsView('SeekerSettingsView');
+const SafePayHistoryView = settingsView('SafePayHistoryView');
+const PayoutSettingsView = settingsView('PayoutSettingsView');
+
 // =======================
 // User Pages
 // =======================
@@ -64,6 +68,7 @@ const ProfilePage = lazy(() => import('../pages/ProfilePage/ProfilePage.tsx'));
 const LeggUtOppdrag = lazy(() => import('../pages/LeggUtOppdragPage/LeggUtOppdrag.tsx'));
 const Alert = lazy(() => import('../pages/AlertPage/Alert.tsx'));
 const LoginPage = lazy(() => import('../pages/LoginPage/LoginPage.tsx'));
+const MfaPage = lazy(() => import('../components/shared/MfaGate.tsx'));
 const RegisterPage = lazy(() => import('../pages/RegisterPage/RegisterPage.tsx'));
 const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage/ForgotPasswordPage.tsx'));
 // AnmeldelserPage intentionally not imported — see the F-36 note on the removed route.
@@ -120,6 +125,72 @@ const CompletedJobPage = lazy(() => import('../pages/CompletedJobPage.tsx'));
 // =======================
 
 const DashboardLayout = lazy(() => import('../pages/SuperAdminDashboard/DashboardLayout.tsx'));
+
+// =======================
+// Developer Pages
+// =======================
+
+const DeveloperLayout = lazy(() => import('../pages/DeveloperDashboard/DeveloperLayout.tsx'));
+const DevOverviewPage = lazy(() => import('../pages/DeveloperDashboard/OverviewPage.tsx'));
+const DevApiMonitoringPage = lazy(() => import('../pages/DeveloperDashboard/ApiMonitoringPage.tsx'));
+const DevErrorsPage = lazy(() => import('../pages/DeveloperDashboard/ErrorsPage.tsx'));
+const DevServerPage = lazy(() => import('../pages/DeveloperDashboard/ServerPage.tsx'));
+const DevMongoPage = lazy(() => import('../pages/DeveloperDashboard/MongoPage.tsx'));
+const DevSchedulerPage = lazy(() => import('../pages/DeveloperDashboard/SchedulerPage.tsx'));
+const DevWebhooksPage = lazy(() => import('../pages/DeveloperDashboard/WebhooksPage.tsx'));
+const DevAuditPage = lazy(() => import('../pages/DeveloperDashboard/AuditPage.tsx'));
+const DevToolsPage = lazy(() => import('../pages/DeveloperDashboard/ToolsPage.tsx'));
+const DevPlannedPage = lazy(() => import('../pages/DeveloperDashboard/PlannedPage.tsx'));
+const DevPaymentsPage = lazy(() => import('../pages/DeveloperDashboard/PaymentsPage.tsx'));
+const DevSafePayPage = lazy(() => import('../pages/DeveloperDashboard/SafePayPage.tsx'));
+const DevSubscriptionsPage = lazy(() => import('../pages/DeveloperDashboard/SubscriptionsPage.tsx'));
+const DevReconciliationPage = lazy(() => import('../pages/DeveloperDashboard/ReconciliationPage.tsx'));
+const DevUserDiagnosticsPage = lazy(() => import('../pages/DeveloperDashboard/UserDiagnosticsPage.tsx'));
+const DevJobDiagnosticsPage = lazy(() => import('../pages/DeveloperDashboard/JobDiagnosticsPage.tsx'));
+const DevLogsExplorerPage = lazy(() => import('../pages/DeveloperDashboard/LogsExplorerPage.tsx'));
+const DevLiveActivityPage = lazy(() => import('../pages/DeveloperDashboard/LiveActivityPage.tsx'));
+const DevSecurityPage = lazy(() => import('../pages/DeveloperDashboard/SecurityPage.tsx'));
+const DevFeatureFlagsPage = lazy(() => import('../pages/DeveloperDashboard/FeatureFlagsPage.tsx'));
+const DevPerformancePage = lazy(() => import('../pages/DeveloperDashboard/PerformancePage.tsx'));
+const DevNotificationsPage = lazy(() => import('../pages/DeveloperDashboard/NotificationsPage.tsx'));
+const DevQueuesPage = lazy(() => import('../pages/DeveloperDashboard/QueuesPage.tsx'));
+const DevRedisPage = lazy(() => import('../pages/DeveloperDashboard/redis/RedisPage.tsx'));
+const DevTicketsPage = lazy(() => import('../pages/DeveloperDashboard/TicketsPage.tsx'));
+const DevDeploymentsPage = lazy(() => import('../pages/DeveloperDashboard/DeploymentsPage.tsx'));
+const DevIncidentsPage = lazy(() => import('../pages/DeveloperDashboard/IncidentsPage.tsx'));
+const DevReportsPage = lazy(() => import('../pages/DeveloperDashboard/ReportsPage.tsx'));
+const DevSettingsPage = lazy(() => import('../pages/DeveloperDashboard/SettingsPage.tsx'));
+const DevIpsPage = lazy(() => import('../pages/DeveloperDashboard/IpsPage.tsx'));
+const DevApprovalsPage = lazy(() => import('../pages/DeveloperDashboard/ApprovalsPage.tsx'));
+const DevInvestigatePage = lazy(() => import('../pages/DeveloperDashboard/InvestigatePage.tsx'));
+const DevIntegrityPage = lazy(() => import('../pages/DeveloperDashboard/IntegrityPage.tsx'));
+const DevBackupsPage = lazy(() => import('../pages/DeveloperDashboard/BackupsPage.tsx'));
+const DevSafePayInspectorPage = lazy(() => import('../pages/DeveloperDashboard/SafePayInspectorPage.tsx'));
+const DevSyntheticPage = lazy(() => import('../pages/DeveloperDashboard/SyntheticPage.tsx'));
+const DevMobilePage = lazy(() => import('../pages/DeveloperDashboard/MobilePage.tsx'));
+const DevDependencyMapPage = lazy(() => import('../pages/DeveloperDashboard/DependencyMapPage.tsx'));
+const DevSloPage = lazy(() => import('../pages/DeveloperDashboard/SloPage.tsx'));
+const DevDeploymentImpactPage = lazy(() => import('../pages/DeveloperDashboard/DeploymentImpactPage.tsx'));
+const DevCostsPage = lazy(() => import('../pages/DeveloperDashboard/CostsPage.tsx'));
+const DevCapacityPage = lazy(() => import('../pages/DeveloperDashboard/CapacityPage.tsx'));
+const DevConfigDriftPage = lazy(() => import('../pages/DeveloperDashboard/ConfigDriftPage.tsx'));
+const DevFailureSimulatorPage = lazy(() => import('../pages/DeveloperDashboard/FailureSimulatorPage.tsx'));
+const DevFraudPage = lazy(() => import('../pages/DeveloperDashboard/FraudPage.tsx'));
+const DevContractsPage = lazy(() => import('../pages/DeveloperDashboard/ContractsPage.tsx'));
+const DevConnectHealthPage = lazy(() => import('../pages/DeveloperDashboard/ConnectHealthPage.tsx'));
+const DevLedgerPage = lazy(() => import('../pages/DeveloperDashboard/LedgerPage.tsx'));
+const DevTransactionsPage = lazy(() => import('../pages/DeveloperDashboard/TransactionsPage.tsx'));
+const DevImpactPage = lazy(() => import('../pages/DeveloperDashboard/ImpactPage.tsx'));
+const DevMarketplacePage = lazy(() => import('../pages/DeveloperDashboard/MarketplacePage.tsx'));
+const DevEventConsistencyPage = lazy(() => import('../pages/DeveloperDashboard/EventConsistencyPage.tsx'));
+const DevMigrationsPage = lazy(() => import('../pages/DeveloperDashboard/MigrationsPage.tsx'));
+const DevRunbooksPage = lazy(() => import('../pages/DeveloperDashboard/RunbooksPage.tsx'));
+const DevPrivacyPage = lazy(() => import('../pages/DeveloperDashboard/PrivacyPage.tsx'));
+const DevSearchHealthPage = lazy(() => import('../pages/DeveloperDashboard/SearchHealthPage.tsx'));
+const DevSessionsPage = lazy(() => import('../pages/DeveloperDashboard/SessionsPage.tsx'));
+const DevQualityPage = lazy(() => import('../pages/DeveloperDashboard/QualityPage.tsx'));
+const DevChangeRiskPage = lazy(() => import('../pages/DeveloperDashboard/ChangeRiskPage.tsx'));
+const DevRumPage = lazy(() => import('../pages/DeveloperDashboard/RumPage.tsx'));
 const DashboardOverviewPage = lazy(
   () => import('../pages/SuperAdminDashboard/DashboardOverviewPage.tsx')
 );
@@ -127,6 +198,8 @@ const UsersPage = lazy(() => import('../pages/SuperAdminDashboard/UsersPage.tsx'
 const ServicesPage = lazy(() => import('../pages/SuperAdminDashboard/ServicesPage.tsx'));
 const AdminEditJobPage = lazy(() => import('../pages/SuperAdminDashboard/AdminEditJobPage.tsx'));
 const OrdersPage = lazy(() => import('../pages/SuperAdminDashboard/OrdersPage.tsx'));
+const OrderDetailPage = lazy(() => import('../pages/SuperAdminDashboard/OrderDetailPage.tsx'));
+const UserDetailPage = lazy(() => import('../pages/SuperAdminDashboard/UserDetailPage.tsx'));
 const ReviewsPage = lazy(() => import('../pages/SuperAdminDashboard/ReviewsPage.tsx'));
 const CategoriesPage = lazy(() => import('../pages/SuperAdminDashboard/CategoriesPage.tsx'));
 const VoucherPage = lazy(() => import('../pages/SuperAdminDashboard/VoucherPage.tsx'));
@@ -134,7 +207,6 @@ const NotificationsPage = lazy(() => import('../pages/SuperAdminDashboard/Notifi
 const TransactionsPage = lazy(() => import('../pages/SuperAdminDashboard/TransactionsPage.tsx'));
 const RoadmapAdminPage = lazy(() => import('../pages/SuperAdminDashboard/RoadmapAdminPage.tsx'));
 const PlansAdminPage = lazy(() => import('../pages/SuperAdminDashboard/PlansAdminPage.tsx'));
-const ActivityLogPage = lazy(() => import('../pages/SuperAdminDashboard/ActivityLogPage.tsx'));
 const SafePayAdminPage = lazy(() => import('../pages/SuperAdminDashboard/SafePayPage.tsx'));
 const FinanceHistoryPage = lazy(
   () => import('../pages/SuperAdminDashboard/FinanceHistoryPage.tsx')
@@ -162,8 +234,6 @@ const JobReportDetailPage = lazy(
 );
 
 // ── New System & Content Pages ────────────────────────────────────────────────
-const SystemHealthPage = lazy(() => import('../pages/SuperAdminDashboard/SystemHealthPage.tsx'));
-const FeatureFlagsPage = lazy(() => import('../pages/SuperAdminDashboard/FeatureFlagsPage.tsx'));
 const HomepageCMSPage = lazy(() => import('../pages/SuperAdminDashboard/HomepageCMSPage.tsx'));
 const CampaignManagementPage = lazy(() => import('../pages/SuperAdminDashboard/CampaignManagementPage.tsx'));
 const GlobalSettingsPage = lazy(
@@ -176,7 +246,6 @@ const AnnouncementsPage = lazy(() => import('../pages/SuperAdminDashboard/Announ
 const MaintenanceModePage = lazy(
   () => import('../pages/SuperAdminDashboard/MaintenanceModePage.tsx')
 );
-const ErrorLogsPage = lazy(() => import('../pages/SuperAdminDashboard/ErrorLogsPage.tsx'));
 const ShopAdminPage = lazy(() => import('../pages/SuperAdminDashboard/ShopAdminPage.tsx'));
 
 // =======================
@@ -258,28 +327,28 @@ export const routes: RouteObject[] = [
             path: '',
             element: <SettingsPage />,
             children: [
-              { index: true, element: <UsernameView /> },
-              { path: 'name', element: <NameView /> },
-              { path: 'bio', element: <BioView /> },
-              { path: 'picture', element: <PictureView /> },
-              { path: 'banner', element: <BannerView /> },
-              { path: 'email', element: <EmailView /> },
-              { path: 'phone', element: <PhoneView /> },
-              { path: 'addresses', element: <AddressesView /> },
-              { path: 'safepay', element: <SafePayHistoryView /> },
-              { path: 'payout', element: <PayoutSettingsView /> },
-              { path: 'password', element: <PasswordView /> },
-              { path: 'delete-account', element: <DeleteAccountView /> },
-              { path: 'location', element: <LocationView /> },
-              { path: 'upcoming', element: <UpcomingPreviewView /> },
-              { path: 'visibility', element: <VisibilityView /> },
-              { path: 'blocked', element: <BlockedUsersView /> },
-              { path: 'cookies', element: <CookiesView /> },
-              { path: 'sessions', element: <SessionsView /> },
-              { path: 'about', element: <AboutView /> },
-              { path: 'notifications', element: <NotificationsView /> },
-              { path: 'subscriptions', element: <SubscriptionView /> },
-              { path: 'seeker', element: <SeekerSettingsView /> },
+              { index: true, element: withSuspense(UsernameView) },
+              { path: 'name', element: withSuspense(NameView) },
+              { path: 'bio', element: withSuspense(BioView) },
+              { path: 'picture', element: withSuspense(PictureView) },
+              { path: 'banner', element: withSuspense(BannerView) },
+              { path: 'email', element: withSuspense(EmailView) },
+              { path: 'phone', element: withSuspense(PhoneView) },
+              { path: 'addresses', element: withSuspense(AddressesView) },
+              { path: 'safepay', element: withSuspense(SafePayHistoryView) },
+              { path: 'payout', element: withSuspense(PayoutSettingsView) },
+              { path: 'password', element: withSuspense(PasswordView) },
+              { path: 'delete-account', element: withSuspense(DeleteAccountView) },
+              { path: 'location', element: withSuspense(LocationView) },
+              { path: 'upcoming', element: withSuspense(UpcomingPreviewView) },
+              { path: 'visibility', element: withSuspense(VisibilityView) },
+              { path: 'blocked', element: withSuspense(BlockedUsersView) },
+              { path: 'cookies', element: withSuspense(CookiesView) },
+              { path: 'sessions', element: withSuspense(SessionsView) },
+              { path: 'about', element: withSuspense(AboutView) },
+              { path: 'notifications', element: withSuspense(NotificationsView) },
+              { path: 'subscriptions', element: withSuspense(SubscriptionView) },
+              { path: 'seeker', element: withSuspense(SeekerSettingsView) },
             ],
           },
         ],
@@ -336,6 +405,12 @@ export const routes: RouteObject[] = [
     element: <PublicRoute>{withSuspense(LoginPage)}</PublicRoute>,
     errorElement: <RouteErrorElement />,
   },
+  {
+    // Admin / developer sessions that still need their authenticator code (lib/axios.ts).
+    path: 'mfa',
+    element: withSuspense(MfaPage),
+    errorElement: <RouteErrorElement />,
+  },
 
   {
     path: 'register',
@@ -355,9 +430,11 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: withSuspense(DashboardOverviewPage) },
       { path: 'users', element: withSuspense(UsersPage) },
+      { path: 'users/:id', element: withSuspense(UserDetailPage) },
       { path: 'services', element: withSuspense(ServicesPage) },
       { path: 'services/:id/edit', element: withSuspense(AdminEditJobPage) },
       { path: 'orders', element: withSuspense(OrdersPage) },
+      { path: 'orders/:id', element: withSuspense(OrderDetailPage) },
       { path: 'reviews', element: withSuspense(ReviewsPage) },
       { path: 'categories', element: withSuspense(CategoriesPage) },
       { path: 'voucher', element: withSuspense(VoucherPage) },
@@ -365,7 +442,8 @@ export const routes: RouteObject[] = [
       { path: 'notifications', element: withSuspense(NotificationsPage) },
       { path: 'roadmap', element: withSuspense(RoadmapAdminPage) },
       { path: 'plans', element: withSuspense(PlansAdminPage) },
-      { path: 'activity', element: withSuspense(ActivityLogPage) },
+      // Moved to the Developer Console; old links redirect.
+      { path: 'activity', element: <Navigate to="/developer/audit" replace /> },
       { path: 'safepay', element: withSuspense(SafePayAdminPage) },
       { path: 'finance-history', element: withSuspense(FinanceHistoryPage) },
       { path: 'subscription-billing', element: withSuspense(SubscriptionBillingAdminPage) },
@@ -383,18 +461,87 @@ export const routes: RouteObject[] = [
       { path: 'job-reports/:reportId', element: withSuspense(JobReportDetailPage) },
 
       // ── System & Content Pages (new) ──────────────────────────────────
-      { path: 'system-health', element: withSuspense(SystemHealthPage) },
-      { path: 'feature-flags', element: withSuspense(FeatureFlagsPage) },
+      // Same live server view as the Developer Console (Super Admins may read /api/developer).
+      { path: 'system-health', element: withSuspense(DevServerPage) },
+      { path: 'feature-flags', element: <Navigate to="/developer/flags" replace /> },
       { path: 'homepage-cms', element: withSuspense(HomepageCMSPage) },
       { path: 'campaigns', element: withSuspense(CampaignManagementPage) },
       { path: 'settings', element: withSuspense(GlobalSettingsPage) },
       { path: 'navigation-footer', element: withSuspense(NavigationFooterPage) },
       { path: 'announcements', element: withSuspense(AnnouncementsPage) },
       { path: 'maintenance', element: withSuspense(MaintenanceModePage) },
-      { path: 'error-logs', element: withSuspense(ErrorLogsPage) },
+      { path: 'error-logs', element: <Navigate to="/developer/errors" replace /> },
       { path: 'shop', element: withSuspense(ShopAdminPage) },
 
       { path: '*', element: withSuspense(NotFoundPage) },
+    ],
+  },
+
+  {
+    path: 'developer',
+    element: <DeveloperProtectedRoute>{withSuspense(DeveloperLayout)}</DeveloperProtectedRoute>,
+    errorElement: <RouteErrorElement />,
+    children: [
+      { index: true, element: withSuspense(DevOverviewPage) },
+      { path: 'api', element: withSuspense(DevApiMonitoringPage) },
+      { path: 'errors', element: withSuspense(DevErrorsPage) },
+      { path: 'server', element: withSuspense(DevServerPage) },
+      { path: 'mongo', element: withSuspense(DevMongoPage) },
+      { path: 'scheduler', element: withSuspense(DevSchedulerPage) },
+      { path: 'webhooks', element: withSuspense(DevWebhooksPage) },
+      { path: 'audit', element: withSuspense(DevAuditPage) },
+      { path: 'tools', element: withSuspense(DevToolsPage) },
+      { path: 'payments', element: withSuspense(DevPaymentsPage) },
+      { path: 'safepay', element: withSuspense(DevSafePayPage) },
+      { path: 'subscriptions', element: withSuspense(DevSubscriptionsPage) },
+      { path: 'reconciliation', element: withSuspense(DevReconciliationPage) },
+      { path: 'users', element: withSuspense(DevUserDiagnosticsPage) },
+      { path: 'jobs', element: withSuspense(DevJobDiagnosticsPage) },
+      { path: 'logs', element: withSuspense(DevLogsExplorerPage) },
+      { path: 'live', element: withSuspense(DevLiveActivityPage) },
+      { path: 'security', element: withSuspense(DevSecurityPage) },
+      { path: 'flags', element: withSuspense(DevFeatureFlagsPage) },
+      { path: 'performance', element: withSuspense(DevPerformancePage) },
+      { path: 'notifications', element: withSuspense(DevNotificationsPage) },
+      { path: 'queues', element: withSuspense(DevQueuesPage) },
+      { path: 'redis/:section?', element: withSuspense(DevRedisPage) },
+      { path: 'tickets', element: withSuspense(DevTicketsPage) },
+      { path: 'deployments', element: withSuspense(DevDeploymentsPage) },
+      { path: 'incidents', element: withSuspense(DevIncidentsPage) },
+      { path: 'reports', element: withSuspense(DevReportsPage) },
+      { path: 'settings', element: withSuspense(DevSettingsPage) },
+      { path: 'ips', element: withSuspense(DevIpsPage) },
+      { path: 'approvals', element: withSuspense(DevApprovalsPage) },
+      { path: 'investigate', element: withSuspense(DevInvestigatePage) },
+      { path: 'integrity', element: withSuspense(DevIntegrityPage) },
+      { path: 'backups', element: withSuspense(DevBackupsPage) },
+      { path: 'safepay-machine', element: withSuspense(DevSafePayInspectorPage) },
+      { path: 'synthetic', element: withSuspense(DevSyntheticPage) },
+      { path: 'mobile', element: withSuspense(DevMobilePage) },
+      { path: 'dependencies', element: withSuspense(DevDependencyMapPage) },
+      { path: 'slo', element: withSuspense(DevSloPage) },
+      { path: 'deployment-impact', element: withSuspense(DevDeploymentImpactPage) },
+      { path: 'costs', element: withSuspense(DevCostsPage) },
+      { path: 'capacity', element: withSuspense(DevCapacityPage) },
+      { path: 'config-drift', element: withSuspense(DevConfigDriftPage) },
+      { path: 'failure-simulator', element: withSuspense(DevFailureSimulatorPage) },
+      { path: 'fraud', element: withSuspense(DevFraudPage) },
+      { path: 'contracts', element: withSuspense(DevContractsPage) },
+      { path: 'connect', element: withSuspense(DevConnectHealthPage) },
+      { path: 'ledger', element: withSuspense(DevLedgerPage) },
+      { path: 'transactions', element: withSuspense(DevTransactionsPage) },
+      { path: 'rum', element: withSuspense(DevRumPage) },
+      { path: 'risk', element: withSuspense(DevChangeRiskPage) },
+      { path: 'quality', element: withSuspense(DevQualityPage) },
+      { path: 'sessions', element: withSuspense(DevSessionsPage) },
+      { path: 'search', element: withSuspense(DevSearchHealthPage) },
+      { path: 'privacy', element: withSuspense(DevPrivacyPage) },
+      { path: 'runbooks', element: withSuspense(DevRunbooksPage) },
+      { path: 'migrations', element: withSuspense(DevMigrationsPage) },
+      { path: 'event-consistency', element: withSuspense(DevEventConsistencyPage) },
+      { path: 'marketplace', element: withSuspense(DevMarketplacePage) },
+      { path: 'impact', element: withSuspense(DevImpactPage) },
+      { path: '*', element: withSuspense(DevPlannedPage) },
     ],
   },
 ];

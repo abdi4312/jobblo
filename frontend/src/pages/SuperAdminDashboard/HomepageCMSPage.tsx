@@ -99,7 +99,7 @@ export default function HomepageCMSPage() {
         actions={
           <button
             onClick={() => refetch()}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-foreground bg-muted hover:bg-accent rounded-md transition-colors"
           >
             <RefreshCw size={16} />
             Oppdater
@@ -108,103 +108,103 @@ export default function HomepageCMSPage() {
       />
 
       <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-5">
-          <div className="flex items-center gap-2 text-gray-800 font-semibold text-sm border-b border-gray-50 pb-3">
+        <div className="bg-card rounded-lg border border-border p-5 space-y-5">
+          <div className="flex items-center gap-2 text-foreground font-semibold text-sm border-b border-border pb-3">
             <Type size={16} />
             Hero-seksjon
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Hero-tittel</label>
+            <label className="text-sm font-medium text-foreground">Hero-tittel</label>
             <input
               value={form.heroTitle}
               onChange={handleChange('heroTitle')}
               placeholder="F.eks. Finn din neste jobb"
-              className="flex h-10 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30 focus:border-[#2d4a3e] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Hero-underrubrikk</label>
+            <label className="text-sm font-medium text-foreground">Hero-underrubrikk</label>
             <input
               value={form.heroSubtitle}
               onChange={handleChange('heroSubtitle')}
               placeholder="F.eks. Utforsk tusenvis av stillinger"
-              className="flex h-10 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30 focus:border-[#2d4a3e] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Hero-beskrivelse</label>
+            <label className="text-sm font-medium text-foreground">Hero-beskrivelse</label>
             <textarea
               value={form.heroDescription}
               onChange={handleChange('heroDescription')}
               placeholder="F.eks. Bli med i dag og oppdag mulighetene"
               rows={3}
-              className="flex w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30 focus:border-[#2d4a3e] disabled:cursor-not-allowed disabled:opacity-50 resize-y min-h-[80px]"
+              className="flex w-full rounded-md border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y min-h-[80px]"
             />
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-5">
-          <div className="flex items-center gap-2 text-gray-800 font-semibold text-sm border-b border-gray-50 pb-3">
+        <div className="bg-card rounded-lg border border-border p-5 space-y-5">
+          <div className="flex items-center gap-2 text-foreground font-semibold text-sm border-b border-border pb-3">
             <Link size={16} />
             CTA (Call to Action)
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">CTA-tekst</label>
+            <label className="text-sm font-medium text-foreground">CTA-tekst</label>
             <input
               value={form.ctaText}
               onChange={handleChange('ctaText')}
               placeholder="F.eks. Se ledige stillinger"
-              className="flex h-10 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30 focus:border-[#2d4a3e] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">CTA-lenke</label>
+            <label className="text-sm font-medium text-foreground">CTA-lenke</label>
             <input
               value={form.ctaUrl}
               onChange={handleChange('ctaUrl')}
               placeholder="F.eks. /jobs"
-              className="flex h-10 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30 focus:border-[#2d4a3e] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-5">
-          <div className="flex items-center gap-2 text-gray-800 font-semibold text-sm border-b border-gray-50 pb-3">
+        <div className="bg-card rounded-lg border border-border p-5 space-y-5">
+          <div className="flex items-center gap-2 text-foreground font-semibold text-sm border-b border-border pb-3">
             <Image size={16} />
             Fremhevede kategorier
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Kategorier (én JSON per linje)</label>
+            <label className="text-sm font-medium text-foreground">Kategorier (én JSON per linje)</label>
             <textarea
               value={form.featuredCategories}
               onChange={handleChange('featuredCategories')}
               placeholder='{"name":"Design","slug":"design","count":42}'
               rows={4}
-              className="flex w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30 focus:border-[#2d4a3e] disabled:cursor-not-allowed disabled:opacity-50 font-mono resize-y min-h-[100px]"
+              className="flex w-full rounded-md border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono resize-y min-h-[100px]"
             />
-            <p className="text-xs text-gray-400">Hver linje må være gyldig JSON. Én kategori per linje.</p>
+            <p className="text-xs text-muted-foreground">Hver linje må være gyldig JSON. Én kategori per linje.</p>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-5">
-          <div className="flex items-center gap-2 text-gray-800 font-semibold text-sm border-b border-gray-50 pb-3">
+        <div className="bg-card rounded-lg border border-border p-5 space-y-5">
+          <div className="flex items-center gap-2 text-foreground font-semibold text-sm border-b border-border pb-3">
             <MessageSquare size={16} />
             Kunngjøringsbanner
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Bannertekst</label>
+            <label className="text-sm font-medium text-foreground">Bannertekst</label>
             <input
               value={form.announcementBanner}
               onChange={handleChange('announcementBanner')}
               placeholder="F.eks. Ny funksjon: Søk med AI!"
-              className="flex h-10 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30 focus:border-[#2d4a3e] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         </div>
@@ -213,7 +213,7 @@ export default function HomepageCMSPage() {
           <button
             type="submit"
             disabled={updateMutation.isPending}
-            className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-[#2d4a3e] hover:bg-[#233b31] rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary/90 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save size={16} />
             {updateMutation.isPending ? 'Lagrer...' : 'Lagre innhold'}

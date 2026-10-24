@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Copy, Code, MessageCircle } from 'lucide-react';
+import { X, Code, MessageCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface ShareModalProps {

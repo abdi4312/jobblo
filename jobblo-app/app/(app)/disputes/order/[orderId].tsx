@@ -17,10 +17,10 @@ import {
   type DisputeStatus,
 } from '../../../../src/types/Dispute';
 import { disputeErrorMessage, httpStatus } from '../../../../src/utils/disputeError';
-import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { Button } from '../../../../src/components/ui/Button';
 import { TC, tc } from '../../../../src/theme/colors';
+import { DisputeOrderSkeleton } from '../../../../src/components/skeletons/ScreenSkeletons';
 
 const STATUS_TONE: Record<DisputeStatus, string> = {
   open: 'bg-danger-tint text-danger',
@@ -97,7 +97,7 @@ export default function DisputeThreadScreen() {
   if (isLoading) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator message="Laster tvist..." />
+        <DisputeOrderSkeleton />
       </SafeAreaView>
     );
   }

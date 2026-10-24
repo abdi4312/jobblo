@@ -54,15 +54,15 @@ export function AdminChatViewer({
                 <div className="lg:col-span-2 space-y-4">
                     {/* Report summary panel (when opened from a report link) */}
                     {reportSummary && (
-                        <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4">
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                             {reportSummary}
                         </div>
                     )}
 
                     {/* Messages */}
-                    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-                        <div className="px-4 py-3 border-b border-gray-50 flex items-center justify-between">
-                            <h3 className="text-sm font-semibold text-gray-800">
+                    <div className="bg-card rounded-lg border border-border overflow-hidden">
+                        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                            <h3 className="text-sm font-semibold text-foreground">
                                 Meldinger ({safeMessages.length})
                             </h3>
                             <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full font-medium">
@@ -77,7 +77,7 @@ export function AdminChatViewer({
                             aria-live="off"
                         >
                             {safeMessages.length === 0 ? (
-                                <p className="text-sm text-gray-400 text-center py-8">
+                                <p className="text-sm text-muted-foreground text-center py-8">
                                     Ingen meldinger i denne chatten.
                                 </p>
                             ) : (

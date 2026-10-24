@@ -1,7 +1,7 @@
 import mainLink from '../mainURLs';
 import type { ApiResponse } from '../../types/admin';
 import type {
-    SafePayContract, SafePaySummary, TimelineEvent,
+    SafePayContract, TimelineEvent,
     Dispute, DisputesSummary, SafePayFinanceSummary, SafePayQuery, DisputesQuery,
     Pagination,
 } from '../../types/admin/safepay';
@@ -20,11 +20,6 @@ export const fetchSafePayList = async (q: SafePayQuery = {}): Promise<{ contract
         `/api/admin/safepay?${toParams(q as Record<string, unknown>)}`
     );
     return { contracts: res.data.data.contracts, pagination: res.data.pagination! };
-};
-
-export const fetchSafePaySummary = async (): Promise<SafePaySummary> => {
-    const res = await mainLink.get<ApiResponse<SafePaySummary>>('/api/admin/safepay/summary');
-    return res.data.data;
 };
 
 export const fetchSafePayFinanceSummary = async (mode: SafePayFinanceSummary['mode']): Promise<SafePayFinanceSummary> => {
@@ -52,7 +47,7 @@ export interface AdminChatMessage {
     createdAt: string;
 }
 
-export interface AdminChatData {
+interface AdminChatData {
     chat: {
         _id: string;
         status: string;
@@ -98,15 +93,6 @@ export const assignDispute = async (id: string): Promise<Dispute> => {
 export const updateDisputeStatus = async (id: string, status: string, note?: string): Promise<Dispute> => {
     const res = await mainLink.patch<ApiResponse<{ dispute: Dispute }>>(`/api/admin/disputes/${id}/status`, { status, note });
     return res.data.data.dispute;
-};
-
-export const requestDisputeInformation = async (id: string, from: 'customer' | 'provider', message: string): Promise<Dispute> => {
-    const res = await mainLink.post<ApiResponse<{ dispute: Dispute }>>(`/api/admin/disputes/${id}/request-information`, { from, message });
-    return res.data.data.dispute;
-};
-
-export const addDisputeMessage = async (id: string, message: string): Promise<void> => {
-    await mainLink.post(`/api/admin/disputes/${id}/message`, { message });
 };
 
 export const addInternalNote = async (id: string, note: string): Promise<void> => {

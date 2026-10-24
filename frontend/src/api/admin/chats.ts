@@ -100,10 +100,11 @@ export interface AdminChatSummary {
     clientId: AdminChatParticipant | null;
     providerId: AdminChatParticipant | null;
     serviceId: { _id: string; title: string; status: string } | null;
-    orderId: string | null;
+    /** Populated by the list endpoint. */
+    orderId: { _id: string; status?: string; paymentStatus?: string; agreedPrice?: number } | string | null;
 }
 
-export interface AdminChatsQuery {
+interface AdminChatsQuery {
     page?: number;
     limit?: number;
     chatId?: string;
@@ -147,7 +148,7 @@ export interface AdminChatReportDetail extends AdminChatReportItem {
     resolution?: { outcome: string; reason: string; resolvedBy: { _id: string; name: string } | null; resolvedAt: string };
 }
 
-export interface AdminChatReportsSummary {
+interface AdminChatReportsSummary {
     open: number;
     under_review: number;
     resolved: number;
@@ -158,7 +159,7 @@ export interface AdminChatReportsSummary {
     unassigned: number;
 }
 
-export interface AdminChatReportsQuery {
+interface AdminChatReportsQuery {
     page?: number;
     limit?: number;
     status?: string;
@@ -197,17 +198,6 @@ export const fetchAdminChatById = async (
     return res.data.data;
 };
 
-export const postAdminChatAccessLog = async (
-    chatId: string,
-    accessReason: string
-): Promise<{ accessLogged: boolean }> => {
-    const res = await mainLink.post<ApiResponse<{ accessLogged: boolean }>>(
-        `/api/admin/chats/${chatId}/access-log`,
-        { accessReason }
-    );
-    return res.data.data;
-};
-
 // ── Admin Chat Reports ────────────────────────────────────────────────────────
 
 export const fetchAdminChatReports = async (
@@ -236,29 +226,6 @@ export const assignChatReport = async (reportId: string): Promise<AdminChatRepor
     const res = await mainLink.patch<ApiResponse<{ report: AdminChatReportItem }>>(
         `/api/admin/chat-reports/${reportId}/assign`,
         {}
-    );
-    return res.data.data.report;
-};
-
-export const updateChatReportPriority = async (
-    reportId: string,
-    priority: string
-): Promise<AdminChatReportItem> => {
-    const res = await mainLink.patch<ApiResponse<{ report: AdminChatReportItem }>>(
-        `/api/admin/chat-reports/${reportId}/priority`,
-        { priority }
-    );
-    return res.data.data.report;
-};
-
-export const updateChatReportStatus = async (
-    reportId: string,
-    status: string,
-    note?: string
-): Promise<AdminChatReportItem> => {
-    const res = await mainLink.patch<ApiResponse<{ report: AdminChatReportItem }>>(
-        `/api/admin/chat-reports/${reportId}/status`,
-        { status, note }
     );
     return res.data.data.report;
 };
@@ -297,38 +264,6 @@ export const resolveChatReport = async (
 };
 
 // ── Additional chat functions ─────────────────────────────────────────────────
-export const fetchAdminChatMessages = async (
-    chatId: string,
-    accessReason: string
-): Promise<{ messages: AdminChatMessage[]; accessLogged: boolean; reason: string }> => {
-    const params = toParams({ accessReason });
-    const res = await mainLink.get<ApiResponse<{ messages: AdminChatMessage[]; accessLogged: boolean; reason: string }>>(
-        `/api/admin/chats/${chatId}/messages?${params}`
-    );
-    return res.data.data;
-};
-
-export const fetchAdminChatReportsForChat = async (
-    chatId: string
-): Promise<AdminChatReport[]> => {
-    const res = await mainLink.get<ApiResponse<{ reports: AdminChatReport[] }>>(
-        `/api/admin/chats/${chatId}/reports`
-    );
-    return res.data.data.reports;
-};
-
-export const fetchChatReportsSummary = async (): Promise<AdminChatReportsSummary> => {
-    const res = await mainLink.get<ApiResponse<AdminChatReportsSummary>>('/api/admin/chat-reports/summary');
-    return res.data.data;
-};
-
-export const createDisputeFromReport = async (reportId: string): Promise<{ disputeId: string }> => {
-    const res = await mainLink.post<ApiResponse<{ disputeId: string }>>(
-        `/api/admin/chat-reports/${reportId}/create-dispute`,
-        {}
-    );
-    return res.data.data;
-};
 
 export const dismissChatReport = async (
     reportId: string,
@@ -351,7 +286,7 @@ export const reopenChatReport = async (reportId: string): Promise<AdminChatRepor
 
 // ── User-facing report submission ─────────────────────────────────────────────
 
-export interface SubmitChatReportPayload {
+interface SubmitChatReportPayload {
     scope: 'chat' | 'message';
     messageId?: string;
     reportType: string;
@@ -359,34 +294,20 @@ export interface SubmitChatReportPayload {
     description: string;
 }
 
-export const submitUserChatReport = async (
+export const postChatReport = async (
     chatId: string,
-    payload: SubmitChatReportPayload,
-    evidenceFiles?: File[]
-): Promise<{ reportId: string; status: string; createdAt: string }> => {
-    const formData = new FormData();
-    formData.append('scope', payload.scope);
-    formData.append('reportType', payload.reportType);
-    formData.append('title', payload.title);
-    formData.append('description', payload.description);
-    if (payload.messageId) formData.append('messageId', payload.messageId);
-    if (evidenceFiles) {
-        evidenceFiles.forEach((f) => formData.append('evidence', f));
-    }
-
-    const res = await mainLink.post<ApiResponse<{ reportId: string; status: string; createdAt: string }>>(
-        `/api/chats/${chatId}/reports`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-    );
-    return res.data.data;
+    payload: SubmitChatReportPayload & { evidence?: Array<{ fileUrl: string; fileType: string }> }
+) => {
+    const res = await mainLink.post(`/api/chats/${chatId}/reports`, payload);
+    return res.data;
 };
 
-export const fetchMyChatsReports = async (
-    chatId: string
-): Promise<Array<{ _id: string; scope: string; reportType: string; title: string; status: string; createdAt: string }>> => {
-    const res = await mainLink.get<ApiResponse<{ reports: Array<{ _id: string; scope: string; reportType: string; title: string; status: string; createdAt: string }> }>>(
-        `/api/chats/${chatId}/reports/me`
-    );
-    return res.data.data.reports;
+export const uploadChatReportEvidence = async (
+    chatId: string,
+    formData: FormData
+): Promise<{ files?: Array<{ fileUrl: string; fileType: string }> }> => {
+    const res = await mainLink.post(`/api/chats/${chatId}/reports/evidence`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
 };

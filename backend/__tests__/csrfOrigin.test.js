@@ -277,17 +277,22 @@ describe('app.js wiring', () => {
   };
 
   it('mounts the guard after the Stripe webhooks and before body parsers and every route', () => {
-    const guard = at('createCsrfOriginGuard(allowedOrigins)');
+    const guard = at('createCsrfOriginGuard(origins)');
     expect(at("app.post('/api/safepay-checkout/webhook'")).toBeLessThan(guard);
     expect(at("app.post('/api/stripe/webhook'")).toBeLessThan(guard);
     expect(guard).toBeLessThan(at('app.use(express.json('));
     expect(guard).toBeLessThan(at('app.use(express.urlencoded('));
-    expect(guard).toBeLessThan(at("app.use('/api/auth', authRouter)"));
-    expect(guard).toBeLessThan(at("app.use('/', previewRouter)"));
+    // Every route (auth, preview, …) is mounted by mountRoutes, after the guard.
+    expect(guard).toBeLessThan(at('mountRoutes(app)'));
+    const routes = require('../routes/api').ROUTES.map(([p]) => p);
+    expect(routes).toEqual(expect.arrayContaining(['/', '/api/auth']));
   });
 
   it('uses the same allowlist as CORS (no Host-derived origins)', () => {
-    expect(src).toMatch(/createCsrfOriginGuard\(allowedOrigins\)/);
+    expect(src).toMatch(/const origins = allowedOrigins\(\)/);
+    expect(src).toMatch(/cors\(corsOptions\(origins\)\)/);
+    expect(src).toMatch(/createCsrfOriginGuard\(origins\)/);
     expect(src).not.toMatch(/req\.(hostname|headers\.host)/);
+    expect(fs.readFileSync(path.join(__dirname, '..', 'config', 'cors.js'), 'utf8')).not.toMatch(/req\.(hostname|headers\.host)/);
   });
 });

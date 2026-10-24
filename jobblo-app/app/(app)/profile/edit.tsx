@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { useProfile, useUpdateProfile } from '../../../src/hooks/useProfile';
 import { useAuthStore } from '../../../src/store/authStore';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
-import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
+import { EditProfileSkeleton } from '../../../src/components/skeletons/ScreenSkeletons';
 import { Card, SectionLabel } from '../../../src/components/ui/Card';
 import { FormRow } from '../../../src/components/ui/FormRow';
 import type { CurrentProfile, ProfileUpdate } from '../../../src/services/profile.service';
@@ -59,7 +59,7 @@ export default function EditProfileScreen() {
     return '';
   }, [draft]);
 
-  if (isLoading || !draft) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator message="Laster redigering..." /></SafeAreaView>;
+  if (isLoading || !draft) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><EditProfileSkeleton /></SafeAreaView>;
   if (isError || !profile) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ErrorState title="Kunne ikke laste profilen" onAction={() => void refetch()} /></SafeAreaView>;
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((current) => current ? { ...current, [key]: value } : current);

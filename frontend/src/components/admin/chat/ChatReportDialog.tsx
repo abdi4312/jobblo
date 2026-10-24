@@ -2,25 +2,25 @@ import React, { useState, useRef } from 'react';
 import { X, Loader2, AlertTriangle, Upload, File } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import mainLink from '../../../api/mainURLs';
+import { postChatReport, uploadChatReportEvidence } from '../../../api/admin/chats';
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
     DialogFooter,
-} from '../../Ui/dialog';
+} from '../../developer/ui/dialog';
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '../../Ui/select';
-import { Input } from '../../Ui/Input';
-import { Textarea } from '../../Ui/textarea';
-import { Button } from '../../Ui/Button';
-import { Checkbox } from '../../Ui/checkbox';
+} from '../../developer/ui/select';
+import { Input } from '../../developer/ui/input';
+import { Textarea } from '../../developer/ui/textarea';
+import { Button } from '../../developer/ui/button';
+import { Checkbox } from '../../developer/ui/checkbox';
 
 const REPORT_TYPES = [
     { label: 'Trakassering', value: 'harassment' },
@@ -64,16 +64,10 @@ export function ChatReportDialog({ chatId, open, onClose, scope = 'chat', messag
     const [description, setDescription] = useState('');
     const [confirmed, setConfirmed] = useState(false);
     const [evidenceFiles, setEvidenceFiles] = useState<EvidenceFile[]>([]);
-    const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const submitMutation = useMutation({
-        mutationFn: async (payload: {
-            scope: string; messageId?: string; reportType: string; title: string; description: string; evidence?: Array<{ fileUrl: string; fileType: string }>;
-        }) => {
-            const res = await mainLink.post(`/api/chats/${chatId}/reports`, payload);
-            return res.data;
-        },
+        mutationFn: (payload: Parameters<typeof postChatReport>[1]) => postChatReport(chatId, payload),
         onSuccess: () => {
             toast.success('Rapport sendt inn. Admin vil gjennomgå den snart.');
             handleClose();
@@ -82,6 +76,11 @@ export function ChatReportDialog({ chatId, open, onClose, scope = 'chat', messag
             toast.error(err?.response?.data?.message ?? 'Kunne ikke sende rapport.');
         },
     });
+
+    const uploadMutation = useMutation({
+        mutationFn: (formData: FormData) => uploadChatReportEvidence(chatId, formData),
+    });
+    const isUploading = uploadMutation.isPending;
 
     const handleClose = () => {
         setReportType('');
@@ -118,25 +117,20 @@ export function ChatReportDialog({ chatId, open, onClose, scope = 'chat', messag
         let evidence: Array<{ fileUrl: string; fileType: string }> = [];
 
         if (evidenceFiles.length > 0) {
-            setIsUploading(true);
             try {
                 const formData = new FormData();
                 for (const ef of evidenceFiles) {
                     formData.append('files', ef.file);
                 }
-                const uploadRes = await mainLink.post(`/api/chats/${chatId}/reports/evidence`, formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' },
-                });
-                evidence = (uploadRes.data.files || []).map((f: { fileUrl: string; fileType: string }) => ({
+                const uploadRes = await uploadMutation.mutateAsync(formData);
+                evidence = (uploadRes.files || []).map((f: { fileUrl: string; fileType: string }) => ({
                     fileUrl: f.fileUrl,
                     fileType: f.fileType,
                 }));
             } catch {
                 toast.error('Kunne ikke laste opp vedlegg.');
-                setIsUploading(false);
                 return;
             }
-            setIsUploading(false);
         }
 
         submitMutation.mutate({
@@ -154,10 +148,10 @@ export function ChatReportDialog({ chatId, open, onClose, scope = 'chat', messag
     return (
         <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
             <DialogContent className="sm:max-w-md p-0 gap-0">
-                <DialogHeader className="p-5 border-b border-gray-100">
+                <DialogHeader className="p-5 border-b border-border">
                     <div className="flex items-center gap-2">
                         <AlertTriangle size={18} className="text-orange-500" />
-                        <DialogTitle className="text-lg font-bold text-gray-900">
+                        <DialogTitle className="text-lg font-bold text-foreground">
                             {scope === 'message' ? 'Rapporter melding' : 'Rapporter chat'}
                         </DialogTitle>
                     </div>
@@ -165,9 +159,9 @@ export function ChatReportDialog({ chatId, open, onClose, scope = 'chat', messag
 
                 <div className="p-5 space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Rapporttype *</label>
+                        <label className="block text-sm font-medium text-foreground mb-1">Rapporttype *</label>
                         <Select value={reportType} onValueChange={setReportType}>
-                            <SelectTrigger className="w-full bg-white border-gray-200 rounded-xl">
+                            <SelectTrigger className="w-full bg-card border-border rounded-md">
                                 <SelectValue placeholder="Velg type..." />
                             </SelectTrigger>
                             <SelectContent>
@@ -179,50 +173,50 @@ export function ChatReportDialog({ chatId, open, onClose, scope = 'chat', messag
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Kort tittel *</label>
+                        <label className="block text-sm font-medium text-foreground mb-1">Kort tittel *</label>
                         <Input
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             maxLength={200}
-                            className="rounded-xl border-gray-200"
+                            className="rounded-md border-border"
                             placeholder="Beskriv problemet kort..."
                         />
-                        <p className="text-[10px] text-gray-300 mt-1">{title.length}/200</p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-1">{title.length}/200</p>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Beskrivelse *</label>
+                        <label className="block text-sm font-medium text-foreground mb-1">Beskrivelse *</label>
                         <Textarea
                             rows={4}
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             maxLength={2000}
-                            className="rounded-xl border-gray-200 resize-none"
+                            className="rounded-md border-border resize-none"
                             placeholder="Gi en detaljert beskrivelse av problemet..."
                         />
-                        <p className="text-[10px] text-gray-300 mt-1">{description.length}/2000</p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-1">{description.length}/2000</p>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Vedlegg (valgfritt)</label>
+                        <label className="block text-sm font-medium text-foreground mb-1">Vedlegg (valgfritt)</label>
                         <input ref={fileInputRef} type="file" multiple accept="image/*,application/pdf"
                             onChange={handleFileSelect} className="hidden" />
                         <button type="button" onClick={() => fileInputRef.current?.click()}
-                            className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-gray-500 border border-dashed border-gray-300 rounded-xl hover:border-gray-400 hover:text-gray-700 transition-colors">
+                            className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-muted-foreground border border-dashed border-border rounded-md hover:border-ring hover:text-foreground transition-colors">
                             <Upload size={14} /> Last opp skjermbilder eller PDF (maks 5 filer)
                         </button>
                         {evidenceFiles.length > 0 && (
                             <div className="mt-2 space-y-1.5">
                                 {evidenceFiles.map((ef, i) => (
-                                    <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 bg-gray-50 rounded-lg text-xs">
+                                    <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 rounded-lg text-xs">
                                         {ef.preview ? (
                                             <img src={ef.preview} alt="" className="w-7 h-7 rounded object-cover shrink-0" />
                                         ) : (
-                                            <File size={14} className="text-gray-400 shrink-0" />
+                                            <File size={14} className="text-muted-foreground shrink-0" />
                                         )}
-                                        <span className="truncate flex-1 text-gray-600">{ef.file.name}</span>
-                                        <button onClick={() => removeFile(i)} className="p-0.5 hover:bg-gray-200 rounded">
-                                            <X size={12} className="text-gray-400" />
+                                        <span className="truncate flex-1 text-muted-foreground">{ef.file.name}</span>
+                                        <button onClick={() => removeFile(i)} className="p-0.5 hover:bg-accent rounded">
+                                            <X size={12} className="text-muted-foreground" />
                                         </button>
                                     </div>
                                 ))}
@@ -233,19 +227,19 @@ export function ChatReportDialog({ chatId, open, onClose, scope = 'chat', messag
                     <label className="flex items-start gap-2 cursor-pointer">
                         <Checkbox checked={confirmed} onCheckedChange={(c) => setConfirmed(c === true)}
                             className="mt-0.5" />
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-muted-foreground">
                             Jeg bekrefter at informasjonen er nøyaktig og at denne rapporten sendes i god tro.
                         </span>
                     </label>
                 </div>
 
-                <DialogFooter className="p-5 border-t border-gray-100 flex flex-row justify-end gap-2">
+                <DialogFooter className="p-5 border-t border-border flex flex-row justify-end gap-2">
                     <Button variant="outline" onClick={handleClose}
-                        className="rounded-xl text-gray-600 border-gray-200">
+                        className="rounded-md text-muted-foreground border-border">
                         Avbryt
                     </Button>
                     <Button onClick={handleSubmit} disabled={!canSubmit}
-                        className="rounded-xl bg-[#2d4a3e] hover:bg-[#233b31] text-white disabled:opacity-50">
+                        className="rounded-md bg-primary hover:bg-primary/90 text-white disabled:opacity-50">
                         {(isUploading || submitMutation.isPending) && <Loader2 size={14} className="animate-spin" />}
                         {isUploading ? 'Laster opp...' : submitMutation.isPending ? 'Sender...' : 'Send rapport'}
                     </Button>

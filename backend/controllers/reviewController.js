@@ -207,28 +207,6 @@ exports.getUserReviews = async (req, res) => {
   }
 };
 
-exports.getReviewByOrder = async (req, res) => {
-  try {
-    const { orderId } = req.params;
-    const { role } = req.query; // 'seeker' or 'poster'
-    const reviewerId = req.userId;
-
-    const query = { orderId, reviewerId };
-    if (role) {
-      query.revieweeRole = role;
-    }
-
-    const review = await Review.findOne(query)
-      .populate('reviewerId', 'name lastName username avatarUrl')
-      .populate('serviceId', 'title');
-
-    res.json(review);
-  } catch (err) {
-    console.error('getReviewByOrder Error:', err);
-    res.status(500).json({ error: 'Server error' });
-  }
-};
-
 exports.getReviewByOrderId = async (req, res) => {
   try {
     const { orderId } = req.params;

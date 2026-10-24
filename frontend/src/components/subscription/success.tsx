@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { AlertCircle, ArrowRight, Headphones, Loader2, RefreshCw } from 'lucide-react';
-import mainLink from '../../api/mainURLs';
+import { getCheckoutSession } from '../../api/stripeAPI';
 import { CARD, MICRO_LABEL } from '../../theme/brand';
 
 /**
@@ -102,10 +102,12 @@ const SuccessPage = () => {
       return;
     }
     try {
-      const res = await mainLink.get<SessionResult>(`/api/stripe/checkout-session/${sessionId}`);
-      setResult(res.data);
-      const isPaid = ['paid', 'no_payment_required'].includes(res.data.payment_status);
-      if (isPaid && res.data.provisioning_status !== 'complete') {
+      // ponytail: bounded post-checkout poll kept as a state machine (retry resets the attempt count);
+      // a useQuery+refetchInterval port is the upgrade path if this screen grows.
+      const data = await getCheckoutSession<SessionResult>(sessionId);
+      setResult(data);
+      const isPaid = ['paid', 'no_payment_required'].includes(data.payment_status);
+      if (isPaid && data.provisioning_status !== 'complete') {
         setStatus('processing');
         setPollAttempt((attempt) => attempt + 1);
       } else {

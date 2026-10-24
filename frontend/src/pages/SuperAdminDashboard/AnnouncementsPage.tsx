@@ -89,7 +89,7 @@ export default function AnnouncementsPage() {
         actions={
           <button
             onClick={() => refetch()}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-foreground bg-muted hover:bg-accent rounded-md transition-colors"
           >
             <RefreshCw size={16} />
             Oppdater
@@ -111,33 +111,33 @@ export default function AnnouncementsPage() {
           return (
             <div
               key={key}
-              className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4"
+              className="bg-card rounded-lg border border-border p-5 space-y-4"
             >
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <Megaphone size={16} className="text-gray-400" />
-                  <span className="text-xs font-mono text-gray-400 select-all">{key}</span>
+                  <Megaphone size={16} className="text-muted-foreground" />
+                  <span className="text-xs font-mono text-muted-foreground select-all">{key}</span>
                 </div>
               </div>
 
               <div className="grid gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1">Melding</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Melding</label>
                   <textarea
                     value={text as string}
                     onChange={(e) => handleChange(key, 'text', e.target.value)}
                     rows={3}
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30 resize-y"
+                    className="w-full rounded-md border border-border px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 resize-y"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Type</label>
+                    <label className="block text-xs font-semibold text-muted-foreground mb-1">Type</label>
                     <select
                       value={type as string}
                       onChange={(e) => handleChange(key, 'type', e.target.value)}
-                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30"
+                      className="w-full rounded-md border border-border px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50"
                     >
                       <option value="info">Info</option>
                       <option value="warning">Advarsel</option>
@@ -147,17 +147,17 @@ export default function AnnouncementsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Aktiv</label>
+                    <label className="block text-xs font-semibold text-muted-foreground mb-1">Aktiv</label>
                     <button
                       onClick={() => handleChange(key, 'active', !active)}
-                      className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${
-                        active ? 'bg-[#2d4a3e]' : 'bg-gray-200'
+                      className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring/50 ${
+                        active ? 'bg-primary' : 'bg-muted'
                       }`}
                       role="switch"
                       aria-checked={active as boolean}
                     >
                       <span
-                        className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ease-in-out ${
+                        className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-card shadow-sm ring-0 transition-transform duration-200 ease-in-out ${
                           active ? 'translate-x-5' : 'translate-x-0'
                         }`}
                       />
@@ -166,13 +166,13 @@ export default function AnnouncementsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1">Lenke-URL</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Lenke-URL</label>
                   <input
                     type="text"
                     value={linkUrl as string}
                     onChange={(e) => handleChange(key, 'linkUrl', e.target.value)}
                     placeholder="https://..."
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30"
+                    className="w-full rounded-md border border-border px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50"
                   />
                 </div>
               </div>
@@ -181,7 +181,7 @@ export default function AnnouncementsPage() {
                 <button
                   onClick={() => handleSave(announcement)}
                   disabled={!hasChanges || isSaving}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#2d4a3e] hover:bg-[#243a30] disabled:opacity-50 rounded-xl transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary hover:bg-primary/90 disabled:opacity-50 rounded-md transition-colors"
                 >
                   <Save size={15} />
                   {isSaving ? 'Lagrer...' : 'Lagre'}

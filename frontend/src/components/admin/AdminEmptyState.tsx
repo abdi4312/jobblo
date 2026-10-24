@@ -9,6 +9,7 @@ interface AdminEmptyStateProps {
     className?: string;
 }
 
+/** Centred icon box, title and description — the Developer Console's EmptyState. */
 export function AdminEmptyState({
     title = 'Ingen resultater',
     description = 'Det er ingen data å vise her ennå.',
@@ -17,19 +18,12 @@ export function AdminEmptyState({
     className,
 }: AdminEmptyStateProps) {
     return (
-        <div
-            className={cn(
-                'flex flex-col items-center justify-center py-16 text-center',
-                className
-            )}
-            role="status"
-            aria-label={title}
-        >
-            <div className="p-4 bg-gray-100 rounded-2xl mb-4 text-gray-400">
-                {icon ?? <Inbox size={32} />}
+        <div className={cn('flex flex-col items-center justify-center px-4 py-12 text-center', className)} role="status" aria-label={title}>
+            <div className="mb-3 flex size-10 items-center justify-center rounded-md border bg-muted text-muted-foreground [&_svg]:size-5">
+                {icon ?? <Inbox />}
             </div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-1">{title}</h3>
-            <p className="text-sm text-gray-400 max-w-xs">{description}</p>
+            <h3 className="text-sm font-medium text-foreground">{title}</h3>
+            <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
             {action && <div className="mt-4">{action}</div>}
         </div>
     );

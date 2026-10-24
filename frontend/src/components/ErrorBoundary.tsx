@@ -1,12 +1,13 @@
 import React from 'react';
 import { Link, useRouteError } from 'react-router-dom';
-import mainLink from '../api/mainURLs';
+import { postClientError } from '../api/publicAPI';
+import { reportProblem } from '../lib/rum';
 
 /** Best-effort report to the backend error log. Returns a reference id if one came back. */
 async function reportClientError(error: unknown, componentStack?: string | null) {
   const err = error as { message?: string; stack?: string } | null | undefined;
   try {
-    const resp = await mainLink.post('/api/errors/client', {
+    const resp = await postClientError({
       errorCode: 'FRONTEND_RENDER_ERROR',
       message: String(err?.message || 'Component render error'),
       route: window.location.pathname,
@@ -31,6 +32,8 @@ export function RouteErrorElement() {
 
   React.useEffect(() => {
     let cancelled = false;
+    const message = String((error as { message?: string } | null)?.message || 'Render error');
+    reportProblem(/dynamically imported module|Loading chunk|ChunkLoadError|Importing a module script failed/i.test(message) ? 'chunk' : 'render', message);
     reportClientError(error).then((id) => {
       if (!cancelled) setReferenceId(id);
     });
@@ -69,38 +72,3 @@ export function RouteErrorElement() {
     </main>
   );
 }
-
-class ErrorBoundary extends React.Component {
-  constructor(props: any) {
-    super(props);
-    this.state = { hasError: false, referenceId: null };
-  }
-
-  async componentDidCatch(error: any, info: any) {
-    this.setState({ hasError: true });
-    const referenceId = await reportClientError(error, info?.componentStack);
-    this.setState({ referenceId });
-  }
-
-  render() {
-    if ((this.state as any).hasError) {
-      return (
-        <div className="p-6 bg-white rounded shadow">
-          <h3 className="text-lg font-bold">Noe gikk galt</h3>
-          <p className="mt-2">
-            Vi oppdaget et problem i grensesnittet. Vennligst prøv å oppdatere siden.
-          </p>
-          {(this.state as any).referenceId && (
-            <p className="mt-2 text-sm text-gray-500">
-              Referanse: {(this.state as any).referenceId}
-            </p>
-          )}
-        </div>
-      );
-    }
-    // @ts-ignore
-    return this.props.children;
-  }
-}
-
-export default ErrorBoundary;

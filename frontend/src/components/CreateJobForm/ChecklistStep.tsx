@@ -1,5 +1,5 @@
 import { Plus, Trash2, ArrowUp, ArrowDown, ListChecks } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface ChecklistItem {
   id: string;

@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const rateLimit = require('express-rate-limit');
+const { makeLimiter } = require('../middleware/rateLimiter');
 const Chat = require('../models/ChatMessage');
 // models/ChatReport default-exports the Mongoose model, so `ChatReport` cannot be
 // destructured out of it — that read `undefined`, and every ChatReport.findOne /
@@ -15,7 +15,7 @@ const User = require('../models/User');
 const { parseObjectId } = require('../utils/pagination');
 
 // Per-user report submission rate limiter — max 5 per hour
-const reportSubmitLimiter = rateLimit({
+const reportSubmitLimiter = makeLimiter('chat-report', {
   windowMs: 60 * 60 * 1000,
   max: 5,
   standardHeaders: true,

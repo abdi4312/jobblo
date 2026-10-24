@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type ComponentRef, useEffect, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -26,7 +26,7 @@ export default function ForgotPasswordScreen() {
   const [emailError, setEmailError] = useState('');
   const [serverError, setServerError] = useState('');
   const [otp, setOtp] = useState<string[]>(() => Array(6).fill(''));
-  const otpInputRefs = useRef<Array<TextInput | null>>([]);
+  const otpInputRefs = useRef<Array<ComponentRef<typeof TextInput> | null>>([]);
   const lastSubmittedOtpRef = useRef<string | null>(null);
   const [otpError, setOtpError] = useState('');
   const [resetToken, setResetToken] = useState('');

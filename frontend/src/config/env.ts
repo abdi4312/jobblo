@@ -31,9 +31,6 @@ function resolveApiBaseUrl(): string {
 /** Absolute base URL of the API, never with a trailing slash. */
 export const API_BASE_URL = resolveApiBaseUrl();
 
-/** True when the build has no explicit API URL configured. */
-export const IS_API_URL_CONFIGURED = !!rawApiUrl?.trim();
-
 /** Builds an absolute API URL for the cases that can't go through axios (OAuth redirects). */
 export const apiUrl = (path: string): string =>
   `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;

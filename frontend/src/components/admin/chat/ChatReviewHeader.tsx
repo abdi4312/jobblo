@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Copy, CheckCircle2 } from 'lucide-react';
 import { AdminStatusBadge } from '../AdminStatusBadge';
 import type { AdminChatDetail } from '../../../api/admin/chats';
@@ -28,18 +28,18 @@ export function ChatReviewHeader({ chat, onClear, onSearchAnother }: ChatReviewH
             : '–';
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
+        <div className="bg-card rounded-lg border border-border p-5 space-y-4">
             {/* Title row */}
             <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-gray-400 font-mono">Chat ID</span>
-                        <span className="font-mono text-sm font-semibold text-gray-800 select-all">
+                        <span className="text-xs text-muted-foreground font-mono">Chat ID</span>
+                        <span className="font-mono text-sm font-semibold text-foreground select-all">
                             {chat._id}
                         </span>
                         <button
                             onClick={copyId}
-                            className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                             aria-label="Kopier Chat ID"
                             title="Kopier Chat ID"
                         >
@@ -58,7 +58,7 @@ export function ChatReviewHeader({ chat, onClear, onSearchAnother }: ChatReviewH
                     {onSearchAnother && (
                         <button
                             onClick={onSearchAnother}
-                            className="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                            className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted hover:bg-accent rounded-md transition-colors"
                         >
                             Søk annen chat
                         </button>
@@ -66,7 +66,7 @@ export function ChatReviewHeader({ chat, onClear, onSearchAnother }: ChatReviewH
                     {onClear && (
                         <button
                             onClick={onClear}
-                            className="px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
+                            className="px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
                         >
                             Fjern chat
                         </button>
@@ -84,17 +84,17 @@ export function ChatReviewHeader({ chat, onClear, onSearchAnother }: ChatReviewH
                     { label: 'Oppdatert', value: fmt(chat.updatedAt) },
                     { label: 'Siste melding', value: fmt(chat.lastMessageAt) },
                 ].map(({ label, value }) => (
-                    <div key={label} className="bg-gray-50 rounded-xl p-3">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-0.5">
+                    <div key={label} className="bg-muted/50 rounded-md p-3">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-0.5">
                             {label}
                         </p>
-                        <p className="text-sm font-semibold text-gray-800 truncate">{value}</p>
+                        <p className="text-sm font-semibold text-foreground truncate">{value}</p>
                     </div>
                 ))}
             </div>
 
             {/* Read-only notice */}
-            <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-100 rounded-xl text-xs text-amber-700">
+            <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-100 rounded-md text-xs text-amber-700">
                 <span aria-hidden="true">⚠️</span>
                 <span>Skrivebeskyttet visning — admin kan ikke redigere, slette eller sende meldinger.</span>
             </div>

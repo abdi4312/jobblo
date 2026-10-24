@@ -98,6 +98,22 @@ const authenticate = async (req, res, next) => {
       });
     }
 
+    // Superadmins and developers must pass the authenticator code on this session before
+    // anything else works — whichever way they signed in. Only the 2FA screens, their own
+    // profile (so the app knows who they are) and logout stay open.
+    if (require('../services/auth/mfa').requiresMfa(user) && !sessionExists.mfaVerifiedAt) {
+      const path = String(req.originalUrl || '').split('?')[0];
+      if (!/^\/api\/auth\/(mfa(\/|$)|profile$|logout$)/.test(path)) {
+        return res.status(403).json({
+          error: 'Two-factor authentication required',
+          message: user.mfaEnabledAt ? 'Enter the code from your authenticator app.' : 'Set up an authenticator app to continue.',
+          code: 'MFA_REQUIRED',
+          setup: !user.mfaEnabledAt,
+        });
+      }
+      req.mfaPending = true;
+    }
+
     // Attach user to request object
     req.user = user;
     req.userId = user._id.toString();
@@ -152,14 +168,12 @@ const optionalAuthenticate = (req, res, next) => {
 };
 
 /**
- * Middleware to require admin role
- * Must be used AFTER authenticate middleware
+ * Middleware factory: allow only the given roles.
+ * Must be used AFTER authenticate middleware.
  *
- * @param {Object} req - Express request object (must have req.user from authenticate middleware)
- * @param {Object} res - Express response object
- * @param {Function} next - Express next middleware function
+ * @param {...string} roles - Roles allowed through
  */
-const requireAdmin = (req, res, next) => {
+const requireRole = (...roles) => (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
       error: 'Authentication required',
@@ -167,14 +181,17 @@ const requireAdmin = (req, res, next) => {
     });
   }
 
-  if (req.user.role !== 'superAdmin') {
+  if (!roles.includes(req.user.role)) {
     return res.status(403).json({
       error: 'Access denied',
-      message: 'Admin privileges required',
+      message: roles.includes('developer') ? 'Developer privileges required' : 'Admin privileges required',
     });
   }
 
   next();
 };
 
-module.exports = { authenticate, optionalAuthenticate, requireAdmin };
+const requireAdmin = requireRole('superAdmin');
+const requireDeveloper = requireRole('developer', 'superAdmin');
+
+module.exports = { authenticate, optionalAuthenticate, requireAdmin, requireDeveloper, requireRole };

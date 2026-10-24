@@ -48,19 +48,6 @@ export interface SafePayContract {
 }
 
 // ── SafePay summary ───────────────────────────────────────────────────────────
-export interface SafePaySummary {
-    orders: {
-        total: number;
-        awaiting_payment: number;
-        paid: number;
-        in_progress: number;
-        completed: number;
-        cancelled: number;
-        disputed: number;
-    };
-    disputes: { open: number; under_review: number; resolved: number };
-    revenue: { secured: number; released: number; refunded: number; fees: number };
-}
 
 export interface SafePayFinanceSummaryGroup {
     _id: { currency: string; status?: string; mode?: boolean };

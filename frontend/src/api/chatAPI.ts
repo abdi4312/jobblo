@@ -10,7 +10,7 @@ export interface ChatMessage {
   systemData?: any;
 }
 
-export interface Chat {
+interface Chat {
   _id: string;
   clientId: {
     _id: string;
@@ -122,26 +122,4 @@ export const createContract = async (chatId: string, agreedPrice?: number): Prom
   const body = agreedPrice !== undefined ? { agreedPrice } : {};
   const response = await mainLink.post(`/api/chats/${chatId}/contracts`, body);
   return response.data;
-};
-
-/**
- * Delete a chat (permanent)
- */
-export const deleteChat = async (chatId: string): Promise<void> => {
-  await mainLink.delete(`/api/chats/${chatId}`);
-};
-
-/**
- * Update agreed price for a chat
- */
-export const updateAgreedPrice = async (chatId: string, agreedPrice: number): Promise<Chat> => {
-  const response = await mainLink.patch(`/api/chats/${chatId}/agreed-price`, { agreedPrice });
-  return response.data;
-};
-
-/**
- * Hide a chat (delete for me)
- */
-export const deleteChatForMe = async (chatId: string): Promise<void> => {
-  await mainLink.patch(`/api/chats/${chatId}/delete-for-me`);
 };

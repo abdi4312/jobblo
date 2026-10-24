@@ -65,21 +65,6 @@ export const useUpdateFavoriteList = () => {
   });
 };
 
-export const useAddContributor = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ listId, userId }: { listId: string; userId: string }) =>
-      favoriteListsApi.addContributor(listId, userId),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: favoriteListsKeys.list(variables.listId),
-      });
-      toast.success('Deltakeren ble lagt til.');
-    },
-    onError: onErrorToast('Kunne ikke legge til deltakeren.'),
-  });
-};
-
 export const useRemoveContributor = () => {
   const queryClient = useQueryClient();
   return useMutation({

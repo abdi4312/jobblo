@@ -7,40 +7,37 @@ const Service = require('../models/Service');
  * GET /api/location-filter/tree
  * Returns the complete location tree with counties, municipalities, and areas
  */
+/**
+ * Pure: county → municipality → area tree, each level in the input order. One pass to group
+ * by parent code (the old version re-filtered every list for every parent: O(n·m)).
+ */
+function buildLocationTree(counties, municipalities, areas) {
+  const group = (rows, key) => rows.reduce((m, r) => m.set(r[key], [...(m.get(r[key]) || []), r]), new Map());
+  const areasBy = group(areas, 'municipalityCode');
+  const municipalitiesBy = group(municipalities, 'countyCode');
+  return counties.map((county) => ({
+    type: 'county',
+    code: county.code,
+    name: county.name,
+    children: (municipalitiesBy.get(county.code) || []).map((m) => ({
+      type: 'municipality',
+      code: m.code,
+      name: m.name,
+      children: (areasBy.get(m.code) || []).map((a) => ({ type: 'area', code: a.code, name: a.name })),
+    })),
+  }));
+}
+exports.buildLocationTree = buildLocationTree;
+
 exports.getLocationTree = async (req, res) => {
   try {
-    const counties = await NorwayCounty.find().sort({ name: 1 });
-    const municipalities = await NorwayMunicipality.find().sort({ name: 1 });
-    const areas = await NorwayArea.find().sort({ name: 1 });
-
-    // Build tree structure
-    const tree = counties.map((county) => {
-      const countyMunicipalities = municipalities.filter((m) => m.countyCode === county.code);
-
-      const municipalityChildren = countyMunicipalities.map((municipality) => {
-        const municipalityAreas = areas.filter((a) => a.municipalityCode === municipality.code);
-
-        return {
-          type: 'municipality',
-          code: municipality.code,
-          name: municipality.name,
-          children: municipalityAreas.map((area) => ({
-            type: 'area',
-            code: area.code,
-            name: area.name,
-          })),
-        };
-      });
-
-      return {
-        type: 'county',
-        code: county.code,
-        name: county.name,
-        children: municipalityChildren,
-      };
-    });
-
-    res.json(tree);
+    const fields = 'code name countyCode municipalityCode';
+    const [counties, municipalities, areas] = await Promise.all([
+      NorwayCounty.find().sort({ name: 1 }).select(fields).lean(),
+      NorwayMunicipality.find().sort({ name: 1 }).select(fields).lean(),
+      NorwayArea.find().sort({ name: 1 }).select(fields).lean(),
+    ]);
+    res.json(buildLocationTree(counties, municipalities, areas));
   } catch (err) {
     console.error('Location Tree Error:', err);
     res.status(500).json({ error: 'Internal server error' });

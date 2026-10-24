@@ -202,5 +202,3 @@ export function ProfileCover({ seed, className = '' }: { seed?: string; classNam
     </div>
   );
 }
-
-export default ProfileCover;

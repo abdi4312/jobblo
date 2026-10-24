@@ -242,15 +242,6 @@ async function notify(input = {}) {
 }
 
 /**
- * The same notification to several people — dispute parties, both sides of an order.
- * Runs them concurrently; one failure does not stop the others.
- */
-async function notifyMany(userIds, build) {
-  const unique = [...new Set((userIds || []).filter(Boolean).map(String))];
-  return Promise.all(unique.map((userId) => notify({ ...build(userId), userId })));
-}
-
-/**
  * A system broadcast: one document, everybody's tray.
  *
  * Kept separate from `notify` because it is genuinely a different shape — `userId` is null,
@@ -272,4 +263,4 @@ async function broadcast({ type, content }) {
   }
 }
 
-module.exports = { notify, notifyMany, broadcast, emitToUser, unreadCount, TYPES };
+module.exports = { notify, broadcast, emitToUser, unreadCount, TYPES };

@@ -12,7 +12,7 @@ import {
     TableRow,
     TableHead,
     TableCell,
-} from '../Ui/table';
+} from '../developer/ui/table';
 
 export interface ColumnDef<T> {
     key: string;
@@ -52,9 +52,9 @@ export function AdminDataTable<T>({
     className,
 }: AdminDataTableProps<T>) {
     return (
-        <div className={cn('bg-white rounded-2xl border border-gray-100 overflow-hidden', className)} translate="no">
+        <div className={cn('overflow-hidden rounded-lg border bg-card shadow-xs', className)} translate="no">
             {toolbar && (
-                <div className="p-4 border-b border-gray-100 flex flex-wrap gap-3 items-center">
+                <div className="flex flex-wrap items-center gap-2 border-b p-3">
                     {toolbar}
                 </div>
             )}
@@ -71,12 +71,12 @@ export function AdminDataTable<T>({
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
-                            <TableRow className="border-b border-gray-100 bg-gray-50 hover:bg-gray-50">
+                            <TableRow className="bg-muted/50 hover:bg-muted/50">
                                 {columns.map((col) => (
                                     <TableHead
                                         key={col.key}
                                         className={cn(
-                                            'text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap px-4 py-3',
+                                            'h-9 whitespace-nowrap px-3 text-left text-xs font-medium text-muted-foreground',
                                             col.headerClassName
                                         )}
                                     >
@@ -85,17 +85,17 @@ export function AdminDataTable<T>({
                                 ))}
                             </TableRow>
                         </TableHeader>
-                        <TableBody className="divide-y divide-gray-50">
+                        <TableBody className="">
                             {data.map((row) => (
                                 <TableRow
                                     key={keyExtractor(row)}
-                                    className="hover:bg-gray-50/50 transition-colors"
+                                    className="transition-colors hover:bg-muted/40"
                                 >
                                     {columns.map((col) => (
                                         <TableCell
                                             key={col.key}
                                             className={cn(
-                                                'text-gray-700 px-4 py-3',
+                                                'px-3 py-2.5 text-sm text-foreground',
                                                 col.className
                                             )}
                                         >
@@ -110,7 +110,7 @@ export function AdminDataTable<T>({
             )}
 
             {pagination && onPageChange && !loading && !error && data.length > 0 && (
-                <div className="px-4 border-t border-gray-100">
+                <div className="border-t px-3">
                     <AdminPagination pagination={pagination} onPageChange={onPageChange} />
                 </div>
             )}

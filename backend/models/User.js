@@ -27,9 +27,12 @@ const userSchema = new mongoose.Schema(
     bio: { type: String },
     role: {
       type: String,
-      enum: ['user', 'superAdmin', 'provider', 'company'],
+      enum: ['user', 'superAdmin', 'provider', 'company', 'developer'],
       default: 'user',
     },
+    // Developer dashboard access for role 'developer': view only, or day-to-day operations.
+    // Sensitive actions (IP blocks, flags, env, thresholds) always need step-up + Super Admin approval.
+    developerAccess: { type: String, enum: ['readonly', 'operations'], default: 'readonly' },
     companyName: { type: String, trim: true },
     orgNumber: { type: String, trim: true },
     orgType: { type: String, trim: true },
@@ -298,6 +301,14 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    // Authenticator-app 2FA (services/auth/mfa.js) — required for superAdmin and developer.
+    // Secrets are AES-256-GCM encrypted; backup codes are SHA-256 hashes. Never selected by default.
+    mfaSecret: { type: String, default: null, select: false },
+    mfaPendingSecret: { type: String, default: null, select: false },
+    mfaLastStep: { type: Number, default: null, select: false }, // last accepted 30 s step (no replay)
+    mfaBackupCodes: { type: [String], default: undefined, select: false },
+    mfaEnabledAt: { type: Date, default: null },
 
     // Soft delete — admin action only. Never hard-delete users with financial history.
     isDeleted: {

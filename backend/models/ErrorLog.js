@@ -18,7 +18,17 @@ const errorLogSchema = new mongoose.Schema(
     requestId: { type: String, default: null, index: true },
     metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
     environment: { type: String, default: process.env.NODE_ENV || 'development' },
-    status: { type: String, enum: ['open', 'resolved'], default: 'open', index: true },
+    // 'open' is shown as "New" in the developer dashboard.
+    status: { type: String, enum: ['open', 'investigating', 'resolved', 'reopened'], default: 'open', index: true },
+    assignee: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    notes: [
+      {
+        _id: false,
+        by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        text: { type: String, maxlength: 2000 },
+        at: { type: Date, default: Date.now },
+      },
+    ],
     resolvedAt: { type: Date, default: null },
     resolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     resolutionNote: { type: String, default: null },

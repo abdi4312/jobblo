@@ -1,7 +1,30 @@
 const rateLimit = require('express-rate-limit');
 
+/**
+ * Every rate limiter is built here. With REDIS_URL the counts live in Redis (one prefix per
+ * limiter), so a limit is a limit across all API instances instead of per process; without
+ * it, the in-memory store as before. If Redis is unreachable requests pass (fail open) rather
+ * than every request failing — a missing rate limit for a minute beats an outage.
+ */
+// Every limiter by name, for the Rate Limit Monitor (limits, and resetKey to unblock a client).
+const LIMITERS = new Map();
+
+function makeLimiter(name, options) {
+  const redis = require('../config/redis');
+  const client = redis.getRedis();
+  let limiter;
+  if (!client) limiter = rateLimit(options);
+  else {
+    const { RedisStore } = require('rate-limit-redis');
+    const store = new RedisStore({ sendCommand: (command, ...args) => client.call(command, ...args), prefix: `${redis.PREFIX}:rl:${name}:` });
+    limiter = rateLimit({ ...options, store, passOnStoreError: true });
+  }
+  LIMITERS.set(name, { name, windowMs: options.windowMs, max: typeof options.max === 'number' ? options.max : null, failedOnly: Boolean(options.skipSuccessfulRequests), limiter });
+  return limiter;
+}
+
 // General API rate limiter
-const apiLimiter = rateLimit({
+const apiLimiter = makeLimiter('api', {
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 1000,
   standardHeaders: true,
@@ -23,7 +46,7 @@ const apiLimiter = rateLimit({
 // `skipSuccessfulRequests` keeps the control aimed at what it is actually for:
 // someone guessing passwords fails, and burns the budget; someone who knows
 // their password never touches it.
-const authLimiter = rateLimit({
+const authLimiter = makeLimiter('auth', {
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20, // failed attempts only
   skipSuccessfulRequests: true,
@@ -37,7 +60,7 @@ const authLimiter = rateLimit({
 
 // OTP send limiter — max 3 OTP requests per 15 minutes per IP
 // Prevents spam/abuse of email sending
-const otpSendLimiter = rateLimit({
+const otpSendLimiter = makeLimiter('otp-send', {
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 3,
   standardHeaders: true,
@@ -49,7 +72,7 @@ const otpSendLimiter = rateLimit({
 
 // OTP verify limiter — max 5 attempts per 10 minutes per IP
 // Prevents brute-force guessing of the 6-digit code
-const otpVerifyLimiter = rateLimit({
+const otpVerifyLimiter = makeLimiter('otp-verify', {
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 5,
   standardHeaders: true,
@@ -60,7 +83,7 @@ const otpVerifyLimiter = rateLimit({
 });
 
 // Admin API rate limiter — 200 requests per IP per 15 minutes
-const adminLimiter = rateLimit({
+const adminLimiter = makeLimiter('admin', {
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 200,
   standardHeaders: true,
@@ -71,7 +94,7 @@ const adminLimiter = rateLimit({
   },
 });
 
-const financeSyncLimiter = rateLimit({
+const financeSyncLimiter = makeLimiter('finance-sync', {
   windowMs: 15 * 60 * 1000,
   max: 5,
   standardHeaders: true,
@@ -83,6 +106,8 @@ const financeSyncLimiter = rateLimit({
 });
 
 module.exports = {
+  makeLimiter,
+  LIMITERS,
   apiLimiter,
   authLimiter,
   otpSendLimiter,

@@ -116,7 +116,7 @@ export default function NavigationFooterPage() {
         actions={
           <button
             onClick={() => { refetchNav(); refetchFooter(); }}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-foreground bg-muted hover:bg-accent rounded-md transition-colors"
           >
             <RefreshCw size={16} />
             Oppdater
@@ -125,16 +125,16 @@ export default function NavigationFooterPage() {
       />
 
       {/* Navigasjon */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-5">
-        <div className="flex items-center justify-between border-b border-gray-50 pb-3">
-          <div className="flex items-center gap-2 text-gray-800 font-semibold text-sm">
+      <div className="bg-card rounded-lg border border-border p-5 space-y-5">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div className="flex items-center gap-2 text-foreground font-semibold text-sm">
             <Link size={16} />
             Navigasjon
           </div>
           <button
             onClick={handleSaveNav}
             disabled={updateNavMutation.isPending}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#2d4a3e] hover:bg-[#233b31] rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary hover:bg-primary/90 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save size={14} />
             {updateNavMutation.isPending ? 'Lagrer...' : 'Lagre navigasjon'}
@@ -142,50 +142,50 @@ export default function NavigationFooterPage() {
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Header-lenker (én per linje: Tittel | /url)</label>
+          <label className="text-sm font-medium text-foreground">Header-lenker (én per linje: Tittel | /url)</label>
           <textarea
             value={navForm.headerLinks}
             onChange={handleNavChange('headerLinks')}
             placeholder="Stillinger | /jobs&#10;Tjenester | /services&#10;Om oss | /about"
             rows={4}
-            className="flex w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30 focus:border-[#2d4a3e] disabled:cursor-not-allowed disabled:opacity-50 resize-y min-h-[80px] font-mono"
+            className="flex w-full rounded-md border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y min-h-[80px] font-mono"
           />
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Footer-lenker (én per linje: Tittel | /url)</label>
+          <label className="text-sm font-medium text-foreground">Footer-lenker (én per linje: Tittel | /url)</label>
           <textarea
             value={navForm.footerLinks}
             onChange={handleNavChange('footerLinks')}
             placeholder="Personvern | /privacy&#10;Vilkår | /terms&#10;Kontakt | /contact"
             rows={4}
-            className="flex w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30 focus:border-[#2d4a3e] disabled:cursor-not-allowed disabled:opacity-50 resize-y min-h-[80px] font-mono"
+            className="flex w-full rounded-md border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y min-h-[80px] font-mono"
           />
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Sosiale medier (én per linje: Platform | https://...)</label>
+          <label className="text-sm font-medium text-foreground">Sosiale medier (én per linje: Platform | https://...)</label>
           <textarea
             value={navForm.socialLinks}
             onChange={handleNavChange('socialLinks')}
             placeholder="Facebook | https://facebook.com/..."
             rows={3}
-            className="flex w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30 focus:border-[#2d4a3e] disabled:cursor-not-allowed disabled:opacity-50 resize-y min-h-[80px] font-mono"
+            className="flex w-full rounded-md border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y min-h-[80px] font-mono"
           />
         </div>
       </div>
 
       {/* Footer */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-5">
-        <div className="flex items-center justify-between border-b border-gray-50 pb-3">
-          <div className="flex items-center gap-2 text-gray-800 font-semibold text-sm">
+      <div className="bg-card rounded-lg border border-border p-5 space-y-5">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div className="flex items-center gap-2 text-foreground font-semibold text-sm">
             <Globe size={16} />
             Footer
           </div>
           <button
             onClick={handleSaveFooter}
             disabled={updateFooterMutation.isPending}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#2d4a3e] hover:bg-[#233b31] rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary hover:bg-primary/90 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save size={14} />
             {updateFooterMutation.isPending ? 'Lagrer...' : 'Lagre footer'}
@@ -193,52 +193,52 @@ export default function NavigationFooterPage() {
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Kontakt-e-post</label>
+          <label className="text-sm font-medium text-foreground">Kontakt-e-post</label>
           <div className="relative">
-            <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               value={footerForm.contactEmail}
               onChange={handleFooterChange('contactEmail')}
               placeholder="kontakt@example.no"
-              className="flex h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30 focus:border-[#2d4a3e] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-md border border-border bg-card pl-9 pr-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Support-e-post</label>
+          <label className="text-sm font-medium text-foreground">Support-e-post</label>
           <div className="relative">
-            <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               value={footerForm.supportEmail}
               onChange={handleFooterChange('supportEmail')}
               placeholder="support@example.no"
-              className="flex h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30 focus:border-[#2d4a3e] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-md border border-border bg-card pl-9 pr-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Copyright-tekst</label>
+          <label className="text-sm font-medium text-foreground">Copyright-tekst</label>
           <div className="relative">
-            <Copyright size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Copyright size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               value={footerForm.copyrightText}
               onChange={handleFooterChange('copyrightText')}
               placeholder="© 2026 Jobblo. Alle rettigheter reservert."
-              className="flex h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30 focus:border-[#2d4a3e] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-md border border-border bg-card pl-9 pr-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Om-tekst</label>
+          <label className="text-sm font-medium text-foreground">Om-tekst</label>
           <textarea
             value={footerForm.aboutText}
             onChange={handleFooterChange('aboutText')}
             placeholder="Jobblo er Norges ledende jobbplattform..."
             rows={4}
-            className="flex w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/30 focus:border-[#2d4a3e] disabled:cursor-not-allowed disabled:opacity-50 resize-y min-h-[80px]"
+            className="flex w-full rounded-md border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y min-h-[80px]"
           />
         </div>
       </div>

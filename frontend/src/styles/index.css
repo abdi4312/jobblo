@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+/* Shared Jobblo palette (bg-jb-page, text-jb-ink, ...): design-tokens/tokens.json */
+@import './tokens.css';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @import '@fontsource-variable/geist';
@@ -19,7 +21,6 @@ a {
   font-family: 'Inter Display', sans-serif;
 }
 body {
-  /* background-color: #F7F7F7; */
   background-color: #f6f1e8;
   overflow-x: hidden;
 }
@@ -37,12 +38,12 @@ body {
 }
 
 @theme {
-  --color-orange-custom: #e08835;
+  --color-orange-custom: var(--color-jb-orange);
   --color-custom-black: #0a0a0a;
   /* The logo's own sprout-stem green. Was #2f7e47, which was close to the mark but not
      taken from it — so the ~90 places using `custom-green` sat a shade off the wordmark
      they appeared next to. Sampled from the logo artwork; see src/theme/brand.ts. */
-  --color-custom-green: #2e6641;
+  --color-custom-green: var(--color-jb-brand);
   --color-custom-green-light: #2e664133;
 }
 
@@ -160,6 +161,50 @@ body {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* Developer dashboard: light, cool palette with tight radii. Set on <body> by
+ * DeveloperLayout (not a wrapper div) so portalled popovers/dialogs get it too. */
+.dev-theme {
+  --radius: 0.375rem;
+  --background: oklch(0.985 0.002 247);
+  --foreground: oklch(0.21 0.02 265);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.02 265);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.02 265);
+  --primary: oklch(0.55 0.17 262);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.967 0.004 247);
+  --secondary-foreground: oklch(0.28 0.02 265);
+  --muted: oklch(0.967 0.004 247);
+  --muted-foreground: oklch(0.55 0.02 264);
+  --accent: oklch(0.96 0.015 255);
+  --accent-foreground: oklch(0.3 0.06 262);
+  --destructive: oklch(0.6 0.2 25);
+  --border: oklch(0.922 0.006 255);
+  --input: oklch(0.91 0.008 255);
+  --ring: oklch(0.72 0.12 262);
+  --chart-1: oklch(0.65 0.15 255);
+  --chart-2: oklch(0.72 0.12 185);
+  --chart-3: oklch(0.68 0.14 295);
+  --chart-4: oklch(0.79 0.13 75);
+  --chart-5: oklch(0.7 0.16 15);
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.35 0.02 265);
+  --sidebar-primary: oklch(0.55 0.17 262);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.96 0.015 255);
+  --sidebar-accent-foreground: oklch(0.3 0.08 262);
+  --sidebar-border: oklch(0.93 0.006 255);
+  --sidebar-ring: oklch(0.72 0.12 262);
+}
+body.dev-theme {
+  background-color: var(--background);
+  font-family: 'Geist Variable', sans-serif;
+}
+.dev-theme :is(h1, h2, h3, h4, h5, h6, p, span, li, a) {
+  font-family: inherit;
 }
 
 @layer base {

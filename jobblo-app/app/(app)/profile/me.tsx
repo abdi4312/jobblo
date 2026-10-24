@@ -34,10 +34,10 @@ import { apiBaseUrl } from '../../../src/api/client';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { ConfirmDialog } from '../../../src/components/ui/ConfirmDialog';
 import { DropdownMenu } from '../../../src/components/ui/DropdownMenu';
-import { ProfileSkeleton } from '../../../src/components/domain/ProfileSkeleton';
 import { ProfileCover } from '../../../src/components/profile/ProfileCover';
 import { TC, tc } from '../../../src/theme/colors';
 import type { PublicUser, Review } from '../../../src/types/UserProfile';
+import { JobProfileSkeleton } from '../../../src/components/skeletons/ScreenSkeletons';
 
 /**
  * Own profile, rebuilt to match the website (frontend/src/components/profile/ProfilePage.tsx):
@@ -179,7 +179,7 @@ export default function JobProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuTop, setMenuTop] = useState<number | undefined>();
-  const menuButton = useRef<View | null>(null);
+  const menuButton = useRef<React.ComponentRef<typeof View>>(null);
   const [logoutVisible, setLogoutVisible] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [openingBankId, setOpeningBankId] = useState(false);
@@ -241,8 +241,8 @@ export default function JobProfileScreen() {
 
   if (isLoading)
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <ProfileSkeleton />
+      <SafeAreaView edges={['left', 'right']} className="flex-1 bg-page">
+        <JobProfileSkeleton />
       </SafeAreaView>
     );
   if (isError || !profile)

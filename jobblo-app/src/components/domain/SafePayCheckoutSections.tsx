@@ -120,7 +120,3 @@ export function SafePayCancelledCard({ order, total }: { order: SafePayOrder; to
     </View>
   );
 }
-
-export function SafePayCheckoutSkeleton() {
-  return <View className="gap-4 px-4 pt-6"><View className="h-4 w-24 rounded bg-line" /><View className="h-24 rounded-2xl bg-line" /><View className="h-40 rounded-3xl bg-line" /><View className="h-64 rounded-3xl bg-line" /></View>;
-}

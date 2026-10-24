@@ -24,7 +24,8 @@ import {
   SelectValue,
 } from '../Ui/select';
 import { Link } from 'react-router-dom';
-import mainLink from '../../api/mainURLs';
+import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
+import { getFinanceList, getFinanceSummary, reconcileFinance } from '../../api/safePayAPI';
 
 type HistoryTab = 'transfers' | 'bank-payouts';
 type Mode = 'current' | 'all' | 'test' | 'live';
@@ -201,18 +202,11 @@ export default function FinanceHistoryTabs({ admin = false }: Props) {
   const [toDateOpen, setToDateOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [result, setResult] = useState<FinanceResponse | null>(null);
-  const [summary, setSummary] = useState<FinanceSummary | null>(null);
   const [selected, setSelected] = useState<FinanceItem | null>(null);
   const [copiedReference, setCopiedReference] = useState('');
   const [copyError, setCopyError] = useState('');
   const dialogRef = useRef<HTMLElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [summaryLoading, setSummaryLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [summaryError, setSummaryError] = useState('');
-  const [reconciling, setReconciling] = useState(false);
   const [reconcileMessage, setReconcileMessage] = useState('');
   const [reconcileCursor, setReconcileCursor] = useState<string | null>(null);
   const reconcileModeInitialized = useRef(false);
@@ -228,88 +222,71 @@ export default function FinanceHistoryTabs({ admin = false }: Props) {
 
   const invalidDateRange = Boolean(dateFrom && dateTo && dateFrom > dateTo);
 
-  useEffect(() => {
-    let active = true;
-    if (invalidDateRange) {
-      setLoading(false);
-      setError('');
-      return () => { active = false; };
-    }
-    const query = new URLSearchParams({ page: String(page), limit: '20' });
-    if (page > 1 && snapshotAtRef.current) query.set('snapshotAt', snapshotAtRef.current);
-    if (admin && mode !== 'current') query.set('mode', mode);
-    if (status) query.set('status', status);
-    if (debouncedSearch) query.set('search', debouncedSearch);
-    if (dateFrom) query.set('dateFrom', dateFrom);
-    if (dateTo) {
-      const endOfDay = new Date(`${dateTo}T23:59:59.999`);
-      query.set('dateTo', endOfDay.toISOString());
-    }
-    const root = admin ? '/api/admin/safepay/finance' : '/api/safepay/finance';
-    const listPath = tab === 'transfers' ? 'transfers' : 'bank-payouts';
-
-    setLoading(true);
-    setError('');
-    mainLink.get<FinanceResponse>(`${root}/${listPath}?${query.toString()}`)
-      .then((listResponse) => {
-        if (!active) return;
-        setResult(listResponse.data);
-        snapshotAtRef.current = listResponse.data.snapshotAt;
-        if (admin && !reconcileModeInitialized.current && listResponse.data.activeMode) {
-          setReconcileMode(listResponse.data.activeMode);
-          reconcileModeInitialized.current = true;
-        }
-      })
-      .catch((requestError: unknown) => {
-        if (!active) return;
-        const errorMessage = (requestError as { response?: { data?: { error?: string } } })?.response?.data?.error;
-        setError(errorMessage || 'Kunne ikke hente transaksjonshistorikken. Prøv igjen.');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => { active = false; };
-  }, [admin, dateFrom, dateTo, debouncedSearch, invalidDateRange, mode, page, refreshKey, status, tab]);
+  const listQuery = useQuery({
+    // refreshKey is in the key so "Oppdater" and a reconcile force a fresh read, as before.
+    queryKey: ['finance-history', admin, tab, mode, status, debouncedSearch, dateFrom, dateTo, page, refreshKey],
+    enabled: !invalidDateRange,
+    retry: false,
+    placeholderData: keepPreviousData,
+    queryFn: () => {
+      const query = new URLSearchParams({ page: String(page), limit: '20' });
+      if (page > 1 && snapshotAtRef.current) query.set('snapshotAt', snapshotAtRef.current);
+      if (admin && mode !== 'current') query.set('mode', mode);
+      if (status) query.set('status', status);
+      if (debouncedSearch) query.set('search', debouncedSearch);
+      if (dateFrom) query.set('dateFrom', dateFrom);
+      if (dateTo) {
+        const endOfDay = new Date(`${dateTo}T23:59:59.999`);
+        query.set('dateTo', endOfDay.toISOString());
+      }
+      return getFinanceList<FinanceResponse>(admin, tab === 'transfers' ? 'transfers' : 'bank-payouts', query);
+    },
+  });
+  const result = listQuery.data ?? null;
+  const loading = listQuery.isFetching;
+  const error = invalidDateRange || !listQuery.error
+    ? ''
+    : (listQuery.error as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+      'Kunne ikke hente transaksjonshistorikken. Prøv igjen.';
 
   useEffect(() => {
-    let active = true;
-    const path = admin
-      ? `/api/admin/safepay/finance/summary?mode=${mode === 'current' ? 'all' : mode}`
-      : '/api/safepay/finance/summary';
-    setSummaryLoading(true);
-    setSummaryError('');
-    mainLink.get<FinanceSummary>(path)
-      .then((response) => {
-        if (active) setSummary(response.data);
-      })
-      .catch(() => {
-        if (active) setSummaryError('Økonomioversikten kunne ikke oppdateres.');
-      })
-      .finally(() => {
-        if (active) setSummaryLoading(false);
-      });
-    return () => { active = false; };
-  }, [admin, mode, refreshKey]);
+    if (!listQuery.data) return;
+    snapshotAtRef.current = listQuery.data.snapshotAt;
+    if (admin && !reconcileModeInitialized.current && listQuery.data.activeMode) {
+      setReconcileMode(listQuery.data.activeMode);
+      reconcileModeInitialized.current = true;
+    }
+  }, [admin, listQuery.data]);
+
+  const summaryQuery = useQuery({
+    queryKey: ['finance-summary', admin, mode, refreshKey],
+    retry: false,
+    placeholderData: keepPreviousData,
+    queryFn: () => getFinanceSummary<FinanceSummary>(admin, mode === 'current' ? 'all' : mode),
+  });
+  const summary = summaryQuery.data ?? null;
+  const summaryLoading = summaryQuery.isFetching;
+  const summaryError = summaryQuery.isError ? 'Økonomioversikten kunne ikke oppdateres.' : '';
+
+  const reconcileMutation = useMutation({ mutationFn: reconcileFinance });
+  const reconciling = reconcileMutation.isPending;
 
   const refresh = () => setRefreshKey((value) => value + 1);
   const reconcile = async () => {
     if (!admin) return;
-    setReconciling(true);
     setReconcileMessage('');
     try {
-      const response = await mainLink.post('/api/admin/safepay/finance/reconcile', {
+      const data = await reconcileMutation.mutateAsync({
         mode: reconcileMode,
         limit: 10,
         ...(reconcileCursor ? { cursorProviderId: reconcileCursor } : {}),
       });
-      setReconcileCursor(response.data.nextCursorProviderId || null);
-      setReconcileMessage(`Avstemming fullført for ${response.data.synchronizedAccounts} konto(er).${response.data.nextCursorProviderId ? ' Synkroniser igjen for neste side.' : ''}`);
+      setReconcileCursor(data.nextCursorProviderId || null);
+      setReconcileMessage(`Avstemming fullført for ${data.synchronizedAccounts} konto(er).${data.nextCursorProviderId ? ' Synkroniser igjen for neste side.' : ''}`);
       refresh();
     } catch (requestError) {
       const errorMessage = (requestError as { response?: { data?: { error?: string } } })?.response?.data?.error;
       setReconcileMessage(errorMessage || 'Avstemming kunne ikke gjennomføres.');
-    } finally {
-      setReconciling(false);
     }
   };
 

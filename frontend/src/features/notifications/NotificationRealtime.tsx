@@ -194,5 +194,3 @@ export function NotificationRealtime() {
 
   return null;
 }
-
-export default NotificationRealtime;

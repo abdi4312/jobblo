@@ -13,6 +13,8 @@ const connectDB = async () => {
       // and still fails fast enough when it genuinely is not.
       serverSelectionTimeoutMS: 30000,
       socketTimeoutMS: 45000,
+      // Query latency for the developer dashboard (services/monitoring/apm.js).
+      monitorCommands: true,
     });
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);

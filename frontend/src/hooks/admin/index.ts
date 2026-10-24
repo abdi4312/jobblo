@@ -10,17 +10,8 @@ import type {
     AdminTransactionsQuery,
 } from '../../api/admin';
 
-// Re-export query types for convenience
-export type {
-    AdminOrdersQuery,
-    AdminServicesQuery,
-    AdminReviewsQuery,
-    AdminCategoriesQuery,
-    AdminTransactionsQuery,
-};
-
 // ── Query keys ────────────────────────────────────────────────────────────────
-export const adminKeys = {
+const adminKeys = {
     all: ['admin'] as const,
     overview: () => [...adminKeys.all, 'overview'] as const,
     users: (q: AdminUsersQuery) => [...adminKeys.all, 'users', q] as const,
@@ -50,14 +41,6 @@ export const useAdminUsers = (query: AdminUsersQuery) =>
         queryFn: () => adminApi.fetchAdminUsers(query),
         staleTime: 20_000,
         placeholderData: (prev) => prev,
-    });
-
-export const useAdminUser = (id: string) =>
-    useQuery({
-        queryKey: adminKeys.user(id),
-        queryFn: () => adminApi.fetchAdminUserById(id),
-        enabled: !!id,
-        staleTime: 30_000,
     });
 
 export const useCreateAdminUser = () => {
@@ -99,32 +82,6 @@ export const useVerifyUser = () => {
     });
 };
 
-export const useSoftDeleteUser = () => {
-    const qc = useQueryClient();
-    return useMutation({
-        mutationFn: (id: string) => adminApi.softDeleteUser(id),
-        onSuccess: () => { qc.invalidateQueries({ queryKey: adminKeys.all }); toast.success('Bruker arkivert.'); },
-        onError: (e: { response?: { data?: { error?: string } } }) =>
-            toast.error(e?.response?.data?.error || 'Kunne ikke arkivere bruker.'),
-    });
-};
-
-export const useRestoreUser = () => {
-    const qc = useQueryClient();
-    return useMutation({
-        mutationFn: (id: string) => adminApi.restoreUser(id),
-        onSuccess: () => { qc.invalidateQueries({ queryKey: adminKeys.all }); toast.success('Bruker gjenopprettet.'); },
-        onError: () => toast.error('Kunne ikke gjenopprette bruker.'),
-    });
-};
-
-export const useRevokeUserSessions = () =>
-    useMutation({
-        mutationFn: (id: string) => adminApi.revokeUserSessions(id),
-        onSuccess: (d) => toast.success(`${d.revokedCount} sesjon(er) tilbakekalt.`),
-        onError: () => toast.error('Kunne ikke tilbakekalle sesjoner.'),
-    });
-
 // ── Orders ────────────────────────────────────────────────────────────────────
 export const useAdminOrders = (query: AdminOrdersQuery) =>
     useQuery({
@@ -132,14 +89,6 @@ export const useAdminOrders = (query: AdminOrdersQuery) =>
         queryFn: () => adminApi.fetchAdminOrders(query),
         staleTime: 20_000,
         placeholderData: (prev) => prev,
-    });
-
-export const useAdminOrder = (id: string) =>
-    useQuery({
-        queryKey: adminKeys.order(id),
-        queryFn: () => adminApi.fetchAdminOrderById(id),
-        enabled: !!id,
-        staleTime: 30_000,
     });
 
 export const useCancelAdminOrder = () => {
@@ -178,17 +127,6 @@ export const useDeleteAdminService = () => {
         onSuccess: () => { qc.invalidateQueries({ queryKey: adminKeys.all }); toast.success('Tjeneste slettet.'); },
         onError: (e: { response?: { data?: { error?: string } } }) =>
             toast.error(e?.response?.data?.error || 'Kunne ikke slette tjeneste.'),
-    });
-};
-
-export const useUpdateAdminService = () => {
-    const qc = useQueryClient();
-    return useMutation({
-        mutationFn: ({ id, data }: { id: string; data: adminApi.AdminServiceUpdate }) =>
-            adminApi.updateAdminService(id, data),
-        onSuccess: () => { qc.invalidateQueries({ queryKey: adminKeys.all }); toast.success('Tjeneste oppdatert.'); },
-        onError: (e: { response?: { data?: { error?: string } } }) =>
-            toast.error(e?.response?.data?.error || 'Kunne ikke oppdatere tjeneste.'),
     });
 };
 
@@ -268,10 +206,3 @@ export const useAdminTransactions = (query: AdminTransactionsQuery) =>
     });
 
 // ── Activity ──────────────────────────────────────────────────────────────────
-export const useActivityLog = (query: Parameters<typeof adminApi.fetchActivityLog>[0]) =>
-    useQuery({
-        queryKey: adminKeys.activity(query),
-        queryFn: () => adminApi.fetchActivityLog(query),
-        staleTime: 15_000,
-        placeholderData: (prev) => prev,
-    });

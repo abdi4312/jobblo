@@ -48,7 +48,6 @@ import { useProfile, useUpdateProfile } from '../../../../src/hooks/useProfile';
 import { useAuthStore } from '../../../../src/store/authStore';
 import { Button } from '../../../../src/components/ui/Button';
 import { Dialog } from '../../../../src/components/ui/Dialog';
-import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { Card, SectionLabel } from '../../../../src/components/ui/Card';
 import { FormRow } from '../../../../src/components/ui/FormRow';
@@ -64,6 +63,7 @@ import {
     type ExperienceInput,
 } from '../../../../src/hooks/useSeeker';
 import { TC, tc } from '../../../../src/theme/colors';
+import { SeekerSkeleton } from '../../../../src/components/skeletons/ScreenSkeletons';
 
 // ─── Max file size: must match backend (8 MB) ────────────────────────────────
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -366,7 +366,7 @@ export default function SeekerScreen() {
     if (isLoading) {
         return (
             <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-                <LoadingIndicator message="Laster jobbsøker-profil..." />
+                <SeekerSkeleton />
             </SafeAreaView>
         );
     }

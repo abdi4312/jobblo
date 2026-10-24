@@ -18,9 +18,9 @@ import {
 } from '../../../src/types/Dispute';
 import { disputeErrorMessage, httpStatus, isDuplicateDisputeError } from '../../../src/utils/disputeError';
 import { Button } from '../../../src/components/ui/Button';
-import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { TC, tc } from '../../../src/theme/colors';
+import { DisputeCreateSkeleton } from '../../../src/components/skeletons/ScreenSkeletons';
 
 function orderErrorMessage(error: unknown) {
   const status = httpStatus(error);
@@ -119,7 +119,7 @@ export default function CreateDisputeScreen() {
   if (isLoading) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator message="Laster oppdrag..." />
+        <DisputeCreateSkeleton />
       </SafeAreaView>
     );
   }

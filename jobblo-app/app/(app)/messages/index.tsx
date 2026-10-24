@@ -7,10 +7,10 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../../src/store/authStore';
 import { useMessages } from '../../../src/hooks/useMessages';
 import type { MessageConversation, MessageParticipant } from '../../../src/services/messages.service';
-import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { TC } from '../../../src/theme/colors';
+import { MessagesSkeleton } from '../../../src/components/skeletons/ScreenSkeletons';
 
 function formatTime(value?: string) {
   if (!value) return '';
@@ -89,7 +89,7 @@ export default function MessagesScreen() {
     try { await query.refetch(); } finally { setRefreshing(false); }
   };
 
-  if (query.isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator message="Laster meldinger..." /></SafeAreaView>;
+  if (query.isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><MessagesSkeleton /></SafeAreaView>;
   if (query.isError) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ErrorState title="Kunne ikke laste meldinger" message="Sjekk internettforbindelsen din og prøv igjen." actionLabel="Prøv igjen" onAction={() => void query.refetch()} /></SafeAreaView>;
   if (!query.data?.length) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ScrollView contentContainerStyle={{ flexGrow: 1 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={TC.brandText} />}><View className="flex-1 px-4 pt-6"><Text className="text-[0.8125rem] font-semibold uppercase tracking-[0.16em] text-muted">Meldinger</Text><Text className="mt-2 text-[1.9rem] font-bold text-ink">Meldinger</Text><View className="mt-8"><EmptyState title="Du har ingen meldinger ennå." message="Når du starter en samtale, vises den her." /></View></View></ScrollView></SafeAreaView>;
 

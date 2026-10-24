@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Locate, MapPin } from 'lucide-react';
+import { ArrowLeft, Loader2, MapPin } from 'lucide-react';
 import { useTopUsers } from '../../features/profile/hooks';
 import { useUserStore } from '../../stores/userStore';
 import { reverseGeocode } from '../../utils/reverseGeocode';

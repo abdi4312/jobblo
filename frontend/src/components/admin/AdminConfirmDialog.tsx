@@ -73,7 +73,7 @@ export function AdminConfirmDialog({
                         className={cn(
                             variant === 'destructive'
                                 ? 'bg-red-600 hover:bg-red-700 focus:ring-red-600'
-                                : 'bg-[#2d4a3e] hover:bg-[#233b31]'
+                                : 'bg-primary hover:bg-primary/90'
                         )}
                     >
                         {loading ? (

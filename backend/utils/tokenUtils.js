@@ -129,7 +129,9 @@ const createSession = async (req, userId) => {
     // use. request-ip also believed client-set headers such as X-Client-IP. The
     // IPv4-mapped "::ffff:" prefix is display noise.
     const clientIp = String(req.ip || '').replace(/^::ffff:/, '') || 'unknown';
-    const agent = req.useragent || {};
+    // Parsed here, the one place that needs it: parsing every request's user agent in a
+    // global middleware cost ~7 % of the API's CPU under load.
+    const agent = req.useragent || new (require('express-useragent').UserAgent)().parse(String(req.headers?.['user-agent'] || ''));
     const location = await getGeoLocation(clientIp);
 
     const device = agent.isMobile ? 'Mobile' : agent.isTablet ? 'Tablet' : 'Desktop';

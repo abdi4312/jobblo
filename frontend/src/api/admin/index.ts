@@ -4,7 +4,6 @@ import type {
     ApiResponse,
     DashboardOverview,
     AdminUser,
-    AdminActivity,
     Pagination,
 } from '../../types/admin';
 
@@ -33,11 +32,6 @@ export const fetchAdminUsers = async (
     return { users: res.data.data.users, pagination: res.data.pagination! };
 };
 
-export const fetchAdminUserById = async (id: string): Promise<AdminUser> => {
-    const res = await mainLink.get<ApiResponse<{ user: AdminUser }>>(`/api/admin/users/${id}`);
-    return res.data.data.user;
-};
-
 export const createAdminUser = async (payload: {
     name: string; email: string; phone?: string; password: string; role: string;
 }): Promise<AdminUser> => {
@@ -58,20 +52,6 @@ export const updateUserStatus = async (id: string, accountStatus: string): Promi
 export const verifyUser = async (id: string): Promise<AdminUser> => {
     const res = await mainLink.put<ApiResponse<{ user: AdminUser }>>(`/api/admin/users/${id}/verify`, {});
     return res.data.data.user;
-};
-
-export const softDeleteUser = async (id: string): Promise<void> => {
-    await mainLink.delete(`/api/admin/users/${id}`);
-};
-
-export const restoreUser = async (id: string): Promise<AdminUser> => {
-    const res = await mainLink.put<ApiResponse<{ user: AdminUser }>>(`/api/admin/users/${id}/restore`, {});
-    return res.data.data.user;
-};
-
-export const revokeUserSessions = async (id: string): Promise<{ revokedCount: number }> => {
-    const res = await mainLink.delete<ApiResponse<{ revokedCount: number }>>(`/api/admin/users/${id}/sessions`);
-    return res.data.data;
 };
 
 // ── Orders ────────────────────────────────────────────────────────────────────
@@ -102,11 +82,6 @@ export const fetchAdminOrders = async (
         `/api/admin/orders?${toParams(query as Record<string, unknown>)}`
     );
     return { orders: res.data.data.orders, pagination: res.data.pagination! };
-};
-
-export const fetchAdminOrderById = async (id: string): Promise<AdminOrder> => {
-    const res = await mainLink.get<ApiResponse<{ order: AdminOrder }>>(`/api/admin/orders/${id}`);
-    return res.data.data.order;
 };
 
 export const cancelAdminOrder = async (id: string): Promise<AdminOrder> => {
@@ -161,29 +136,6 @@ export const updateServiceStatus = async (id: string, status: string): Promise<A
 
 export const deleteAdminService = async (id: string): Promise<void> => {
     await mainLink.delete(`/api/admin/services/${id}`);
-};
-
-export interface AdminServiceUpdate {
-    title?: string;
-    description?: string;
-    price?: number;
-    hourlyRate?: number;
-    paymentType?: string;
-    categories?: string[];
-    tags?: string[];
-    fromDate?: string;
-    toDate?: string;
-    equipment?: string;
-    maxApplicants?: number;
-    urgent?: boolean;
-    promoted?: boolean;
-    status?: string;
-    location?: { address?: string; city?: string };
-}
-
-export const updateAdminService = async (id: string, data: AdminServiceUpdate): Promise<AdminService> => {
-    const res = await mainLink.put<ApiResponse<{ service: AdminService }>>(`/api/admin/services/${id}`, data);
-    return res.data.data.service;
 };
 
 // ── Reviews ───────────────────────────────────────────────────────────────────
@@ -293,12 +245,86 @@ export const fetchAdminTransactions = async (
 };
 
 // ── Activity Log ──────────────────────────────────────────────────────────────
-export const fetchActivityLog = async (query: {
-    page?: number; limit?: number; action?: string; targetModel?: string;
-    dateFrom?: string; dateTo?: string;
-}): Promise<{ logs: AdminActivity[]; pagination: Pagination }> => {
-    const res = await mainLink.get<ApiResponse<{ logs: AdminActivity[] }>>(
-        `/api/admin/activity?${toParams(query as Record<string, unknown>)}`
-    );
-    return { logs: res.data.data.logs, pagination: res.data.pagination! };
+
+// ── Page-level admin endpoints (edit job, notifications, shop, vouchers, billing) ──
+export const fetchAdminServiceById = async (id: string) => {
+    const res = await mainLink.get(`/api/admin/services/${id}`);
+    return res.data.data.service;
 };
+
+export const updateAdminServiceForm = (id: string, formData: FormData) =>
+    mainLink.put(`/api/admin/services/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+export const fetchSystemHistory = async (page: number, limit = 5) =>
+    (await mainLink.get(`/api/admin/system-history?page=${page}&limit=${limit}`)).data;
+
+export const sendSystemNotification = async (payload: Record<string, unknown>) =>
+    (await mainLink.post('/api/notifications/system', payload)).data;
+
+// ── Shop (moved from ShopAdminPage) ──────────────────────────────────────────
+export interface ShopItem {
+    _id: string;
+    title: string;
+    description: string;
+    coins: number;
+    category: 'coins' | 'premium' | 'feature';
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface ShopForm {
+    title: string;
+    description: string;
+    coins: string;
+    category: 'coins' | 'premium' | 'feature';
+}
+
+
+export const fetchShopItems = async (page: number) => {
+    const resp = await mainLink.get(`/api/admin/shop?page=${page}&limit=15`);
+    return { items: resp.data.data.items as ShopItem[], pagination: resp.data.pagination };
+};
+
+export const createShopItem = async (payload: ShopForm) => {
+    const resp = await mainLink.post('/api/admin/shop', {
+        ...payload,
+        coins: parseInt(payload.coins, 10) || 0,
+    });
+    return resp.data;
+};
+
+export const updateShopItem = async (id: string, payload: ShopForm) => {
+    const resp = await mainLink.put(`/api/admin/shop/${id}`, {
+        ...payload,
+        coins: parseInt(payload.coins, 10) || 0,
+    });
+    return resp.data;
+};
+
+export const toggleShopItem = async (id: string) => {
+    const resp = await mainLink.put(`/api/admin/shop/${id}/toggle`);
+    return resp.data;
+};
+
+export const deleteShopItem = async (id: string) => {
+    await mainLink.delete(`/api/admin/shop/${id}`);
+};
+
+// ── Subscription billing + promotion codes ───────────────────────────────────
+export const fetchSubscriptionBillingSummary = async (mode: string) =>
+    (await mainLink.get(`/api/admin/billing/subscriptions/summary?mode=${mode}`)).data;
+
+export const reconcileSubscriptionBilling = async (payload: { mode: string; limit: number; cursorUserId?: string }) =>
+    (await mainLink.post('/api/admin/billing/subscriptions/reconcile', payload)).data;
+
+export const fetchPromotionCodes = async <T = unknown>(): Promise<{ vouchers: T[]; mode: string }> => {
+    const resp = await mainLink.get('/api/admin/promotion-codes');
+    return { vouchers: resp.data.promotions, mode: resp.data.mode };
+};
+
+export const deactivatePromotionCode = (id: string) => mainLink.post(`/api/admin/promotion-codes/${id}/deactivate`);
+
+export const createPromotionCode = (payload: Record<string, unknown>) => mainLink.post('/api/admin/promotion-codes', payload);

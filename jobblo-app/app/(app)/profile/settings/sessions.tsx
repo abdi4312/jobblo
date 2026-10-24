@@ -23,9 +23,9 @@ import { Card, SectionLabel } from '../../../../src/components/ui/Card';
 import { ListRow } from '../../../../src/components/ui/ListRow';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
-import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
 import { TC, tc } from '../../../../src/theme/colors';
+import { SessionsSkeleton } from '../../../../src/components/skeletons/ScreenSkeletons';
 
 /* ------------------------------------------------------------------ *
  * Presentation helpers
@@ -232,7 +232,7 @@ export default function ActiveSessionsScreen() {
   if (sessionsQuery.isLoading) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator message="Laster aktive økter..." />
+        <SessionsSkeleton />
       </SafeAreaView>
     );
   }

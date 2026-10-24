@@ -22,7 +22,7 @@ import type { AlertType } from './types';
  * "job_update" is called or which page a payment notification opens.
  */
 
-export interface NotificationMeta {
+interface NotificationMeta {
   label: string;
   Icon: LucideIcon;
 }

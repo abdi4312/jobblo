@@ -12,8 +12,9 @@ const EXPLORE_SORT_OPTIONS = [
 ] as const;
 
 import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
-import * as Icons from 'lucide-react';
 import { FileText, LayoutGrid, ShieldCheck, Star } from 'lucide-react';
+import type { IconName } from 'lucide-react/dynamic';
+import { CategoryIcon } from '../../components/CategoryIcon';
 import { useJobs } from '../../features/jobsList/hooks';
 import { useCategories } from '../../features/categories/hooks';
 import { useDashboardStats } from '../../features/explore/hooks';
@@ -49,40 +50,18 @@ import {
  * the tiles stay out of the way when they do not.
  */
 
-// Helper function to map category icon names to actual icons
-const getCategoryIcon = (cat: any) => {
-  if (cat.icon) {
-    const iconName = typeof cat.icon === 'string' ? cat.icon : String(cat.icon);
-    const Icon = (Icons as any)[iconName];
-    if (Icon) return Icon;
-
-    const iconMap: Record<string, any> = {
-      BrushCleaning: Icons.Brush,
-      Flower2: Icons.Sprout,
-      Hammer: Icons.Hammer,
-      Box: Icons.Package,
-      Handshake: Icons.Handshake,
-    };
-    if (iconMap[iconName]) return iconMap[iconName];
-  }
-
-  const lowerName = cat.name.toLowerCase();
-  if (
-    lowerName.includes('håndverk') ||
-    lowerName.includes('håndverker') ||
-    lowerName.includes('oppussing')
-  )
-    return Icons.Wrench;
-  if (lowerName.includes('maling')) return Icons.Paintbrush;
-  if (lowerName.includes('rengjøring') || lowerName.includes('rense')) return Icons.Home;
-  if (lowerName.includes('flytting') || lowerName.includes('flytt')) return Icons.Truck;
-  if (lowerName.includes('hage') || lowerName.includes('hagearbeid')) return Icons.Sprout;
-  if (lowerName.includes('it') || lowerName.includes('nettverk') || lowerName.includes('pc'))
-    return Icons.Laptop;
-  if (lowerName.includes('transport')) return Icons.Package;
-  if (lowerName.includes('rørlegger')) return Icons.Wrench;
-  if (lowerName.includes('småjobber')) return Icons.Handshake;
-  return Icons.MoreHorizontal;
+// Icon when a category has none (or an unknown name), guessed from its name.
+const guessCategoryIcon = (name: string): IconName => {
+  const n = name.toLowerCase();
+  if (n.includes('håndverk') || n.includes('oppussing') || n.includes('rørlegger')) return 'wrench';
+  if (n.includes('maling')) return 'paintbrush';
+  if (n.includes('rengjøring') || n.includes('rense')) return 'house';
+  if (n.includes('flytt')) return 'truck';
+  if (n.includes('hage')) return 'sprout';
+  if (n.includes('it') || n.includes('nettverk') || n.includes('pc')) return 'laptop';
+  if (n.includes('transport')) return 'package';
+  if (n.includes('småjobber')) return 'handshake';
+  return 'ellipsis';
 };
 
 const TRUST = [
@@ -265,7 +244,7 @@ export default function JobListingPage() {
     sort: sortValue,
     tab: 'Discover',
   });
-  const { data: categoriesData } = useCategories();
+  const { data: categoriesData, isLoading: categoriesLoading } = useCategories();
   const { data: statsData } = useDashboardStats();
   const { data: topUsersData } = useTopUsers(1, 10, {
     postNumber: user?.postNumber,
@@ -350,7 +329,8 @@ export default function JobListingPage() {
               aria-hidden="true"
               className="pointer-events-none absolute inset-y-0 right-0 w-2/3"
             >
-              <img src={season.photo} alt="" className="size-full object-cover opacity-25" />
+              {/* The page's largest element (LCP): fetch it before the job thumbnails. */}
+              <img src={season.photo} alt="" fetchPriority="high" className="size-full object-cover opacity-25" />
               <div className="absolute inset-0 bg-linear-to-r from-[#2E6641] via-[#2E6641]/85 to-[#2E6641]/45" />
             </div>
           )}
@@ -414,9 +394,18 @@ export default function JobListingPage() {
           />
 
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-            {[{ _id: 'all', name: 'Alle', icon: null } as any, ...categories].map((cat) => {
+            {/* Placeholders of the same size while categories load, so the grid does not grow
+                from one row to several and push the page down (CLS 0.2 on phones).
+                ponytail: 11 = today's category count; a different count still shifts by a row. */}
+            {categoriesLoading &&
+              Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} aria-hidden="true" className="flex flex-col items-center gap-2.5 rounded-2xl border border-[#E6E7E1] bg-white p-4">
+                  <div className="jb-skeleton size-[22px] rounded-md" />
+                  <div className="jb-skeleton h-4 w-12 rounded" />
+                </div>
+              ))}
+            {!categoriesLoading && [{ _id: 'all', name: 'Alle', icon: null } as any, ...categories].map((cat) => {
               const isAll = cat._id === 'all';
-              const Icon = isAll ? LayoutGrid : getCategoryIcon(cat);
               const isSelected = isAll
                 ? selectedCategories.length === 0
                 : selectedCategories.includes(cat.name);
@@ -453,7 +442,11 @@ export default function JobListingPage() {
                       : 'border-[#E6E7E1] bg-white hover:border-[#2E6641]/45'
                   }`}
                 >
-                  <Icon size={22} strokeWidth={1.8} className="text-[#2E6641]" />
+                  {isAll ? (
+                    <LayoutGrid size={22} strokeWidth={1.8} className="text-[#2E6641]" />
+                  ) : (
+                    <CategoryIcon name={cat.icon} fallback={guessCategoryIcon(cat.name)} size={22} strokeWidth={1.8} className="text-[#2E6641]" />
+                  )}
                   <span className="line-clamp-2 text-[0.75rem] font-medium text-[#0B0B0B]">
                     {cat.name}
                   </span>

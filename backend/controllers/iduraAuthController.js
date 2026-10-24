@@ -304,4 +304,3 @@ exports.iduraCallback = async (req, res) => {
 };
 
 exports.ERRORS = ERRORS;
-exports._internals = { claimIdentity, applyVerification };

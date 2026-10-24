@@ -208,9 +208,10 @@ describe('Firebase Admin runtime credentials', () => {
     PushToken.find.mockReturnValueOnce({
       select: () => ({ lean: () => Promise.resolve([{ token: 't1' }]) }),
     });
-    const { sendPushToUser } = require('../services/pushNotifications');
+    const { deliverPush } = require('../services/pushNotifications');
 
-    await expect(sendPushToUser('u1', { title: 'Hei', body: 'x' })).resolves.toBeUndefined();
+    // The whole FCM call failed: deliverPush throws so the push queue retries it.
+    await expect(deliverPush('u1', { title: 'Hei', body: 'x' })).rejects.toThrow(/credentials/);
     expect(error).toHaveBeenCalledWith(expect.stringMatching(/credentials are missing/));
     expect(error).toHaveBeenCalledWith('FCM push delivery failed:', expect.any(String));
     const { getApps, deleteApp } = require('firebase-admin/app');
@@ -235,9 +236,9 @@ describe('Firebase Admin runtime credentials', () => {
     PushToken.find.mockReturnValueOnce({
       select: () => ({ lean: () => Promise.resolve([{ token: 'ok' }, { token: 'dead' }]) }),
     });
-    const { sendPushToUser } = require('../services/pushNotifications');
+    const { deliverPush } = require('../services/pushNotifications');
 
-    await sendPushToUser('u1', { title: 'Ny melding', body: 'Hei', data: { chatId: 7 } });
+    await deliverPush('u1', { title: 'Ny melding', body: 'Hei', data: { chatId: 7 } });
 
     expect(send).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -250,5 +251,13 @@ describe('Firebase Admin runtime credentials', () => {
       { token: { $in: ['dead'] } },
       { $set: { active: false } }
     );
+  });
+
+  it('sendPushToUser queues the push instead of sending inline (in-process without Redis)', async () => {
+    jest.doMock('../services/queue', () => ({ enqueue: jest.fn().mockResolvedValue({ id: null, inline: true }) }));
+    const { enqueue } = require('../services/queue');
+    const { sendPushToUser } = require('../services/pushNotifications');
+    await expect(sendPushToUser('u1', { title: 'Hei' })).resolves.toEqual({ id: null, inline: true });
+    expect(enqueue).toHaveBeenCalledWith('push', 'send', { userId: 'u1', message: { title: 'Hei' } });
   });
 });

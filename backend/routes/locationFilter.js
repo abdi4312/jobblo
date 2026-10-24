@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const locationFilterController = require('../controllers/locationFilterController');
+const { cacheJson } = require('../utils/cache');
 
 /**
  * @swagger
@@ -23,7 +24,7 @@ const locationFilterController = require('../controllers/locationFilterControlle
  *       500:
  *         description: Serverfeil ved henting av lokasjonstre
  */
-router.get('/tree', locationFilterController.getLocationTree);
+router.get('/tree', cacheJson('location-tree', 3600), locationFilterController.getLocationTree); // static reference data
 
 /**
  * @swagger

@@ -313,7 +313,7 @@ export default function ExploreScreen() {
             <View className="items-center justify-center py-8">
               <ActivityIndicator color={TC.brandText} size="small" />
             </View>
-          ) : null
+          ) : undefined
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
@@ -354,7 +354,7 @@ export default function ExploreScreen() {
                   </View>
                 )}
             </View>
-          ) : null
+          ) : undefined
         }
       />
 

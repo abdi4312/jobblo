@@ -87,12 +87,13 @@ exports.getMyApplications = async (req, res) => {
             paid: 'Start jobben',
             in_progress: 'Jobb pågår — oppdater fremdrift',
             ready_for_review: 'Venter på godkjenning fra oppdragsgiver',
+            waiting_for_approval: 'Venter på godkjenning fra oppdragsgiver',
             completed: 'Jobb fullført',
             disputed: 'Tvist under behandling',
             refunded: 'Refundert',
             cancelled: 'Kansellert',
           };
-          nextAction = actionMap[order.status] || order.status;
+          nextAction = actionMap[order.status] || 'Under behandling';
         }
 
         return {

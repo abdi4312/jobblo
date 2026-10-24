@@ -61,5 +61,3 @@ export function getErrorMessage(err: unknown, fallback = 'Noe gikk galt. Prøv i
 
   return fallback;
 }
-
-export default getErrorMessage;

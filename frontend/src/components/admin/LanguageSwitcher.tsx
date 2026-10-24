@@ -15,7 +15,7 @@ export function LanguageSwitcher() {
             value={locale}
             onChange={handleChange}
             aria-label={t('language.bytt_sprak')}
-            className="text-xs font-medium bg-transparent border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 cursor-pointer"
+            className="h-8 cursor-pointer rounded-md border bg-card px-2 text-xs font-medium text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         >
             {locales.map((l) => (
                 <option key={l} value={l}>

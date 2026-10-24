@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Star } from 'lucide-react';
 import { useAdminReviews, useDeleteAdminReview } from '../../hooks/admin';
 import type { AdminReviewsQuery, AdminReview } from '../../api/admin';
@@ -25,10 +25,10 @@ function StarRating({ rating }: { rating: number }) {
                 <Star
                     key={i}
                     size={14}
-                    className={i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200'}
+                    className={i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground/60'}
                 />
             ))}
-            <span className="ml-1 text-xs text-gray-500">{rating}/5</span>
+            <span className="ml-1 text-xs text-muted-foreground">{rating}/5</span>
         </div>
     );
 }
@@ -63,10 +63,10 @@ export default function ReviewsPage() {
                         className="w-8 h-8 rounded-full object-cover shrink-0"
                     />
                     <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-800 truncate">
+                        <p className="text-sm font-medium text-foreground truncate">
                             {r.reviewerId?.name ?? '–'}
                         </p>
-                        <p className="text-xs text-gray-400 truncate">{r.reviewerId?.email ?? ''}</p>
+                        <p className="text-xs text-muted-foreground truncate">{r.reviewerId?.email ?? ''}</p>
                     </div>
                 </div>
             ),
@@ -75,14 +75,14 @@ export default function ReviewsPage() {
             key: 'reviewee',
             header: 'Mottaker',
             render: (r) => (
-                <span className="text-sm text-gray-600">{r.revieweeId?.name ?? '–'}</span>
+                <span className="text-sm text-muted-foreground">{r.revieweeId?.name ?? '–'}</span>
             ),
         },
         {
             key: 'service',
             header: 'Tjeneste',
             render: (r) => (
-                <span className="text-sm text-gray-600 truncate max-w-[120px] block">
+                <span className="text-sm text-muted-foreground truncate max-w-[120px] block">
                     {r.serviceId?.title ?? '–'}
                 </span>
             ),
@@ -96,8 +96,8 @@ export default function ReviewsPage() {
             key: 'comment',
             header: 'Kommentar',
             render: (r) => (
-                <span className="text-sm text-gray-600 truncate max-w-[200px] block">
-                    {r.comment ?? <span className="text-gray-300 italic">Ingen kommentar</span>}
+                <span className="text-sm text-muted-foreground truncate max-w-[200px] block">
+                    {r.comment ?? <span className="text-muted-foreground/60 italic">Ingen kommentar</span>}
                 </span>
             ),
         },
@@ -149,7 +149,7 @@ export default function ReviewsPage() {
                 onPageChange={setPage}
                 toolbar={
                     <div className="flex flex-wrap gap-3 w-full">
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Star size={16} />
                             <span>{data?.pagination.total ?? 0} vurderinger totalt</span>
                         </div>

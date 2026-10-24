@@ -7,8 +7,8 @@ import { useCreateTicket, useMyTickets } from '../../../src/hooks/useSupport';
 import type { SupportTicket, SupportTicketStatus } from '../../../src/services/support.service';
 import { Button } from '../../../src/components/ui/Button';
 import { MEMBERSHIP_ENABLED } from '../../../src/config/features';
-import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 import { TC, tc } from '../../../src/theme/colors';
+import { SupportTicketsSkeleton } from '../../../src/components/skeletons/ScreenSkeletons';
 
 const SUPPORT_EMAIL = 'support@jobblo.no';
 
@@ -278,8 +278,8 @@ export default function SupportScreen() {
           </View>
 
           {ticketsLoading ? (
-            <View className="py-8">
-              <LoadingIndicator message="Laster sakene dine..." />
+            <View>
+              <SupportTicketsSkeleton />
             </View>
           ) : ticketsError ? (
             <View className="px-5 py-6">

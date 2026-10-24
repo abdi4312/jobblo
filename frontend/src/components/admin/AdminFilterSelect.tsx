@@ -4,7 +4,7 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '../Ui/select';
+} from '../developer/ui/select';
 import { cn } from '@/lib/utils';
 
 interface FilterOption {
@@ -36,7 +36,7 @@ export function AdminFilterSelect({
             disabled={disabled}
         >
             <SelectTrigger
-                className={cn('h-[42px] min-w-[140px] bg-gray-50 border-gray-200', className)}
+                className={cn('h-9 min-w-[140px] bg-card shadow-xs', className)}
                 aria-label={placeholder}
             >
                 <SelectValue placeholder={placeholder} />

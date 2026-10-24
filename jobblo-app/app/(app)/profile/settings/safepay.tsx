@@ -22,13 +22,13 @@ import { useRouter } from 'expo-router';
 import { useSafePayHistory } from '../../../../src/hooks/useSafePayHistory';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
-import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
 import { Card, SectionLabel } from '../../../../src/components/ui/Card';
 import { Chip } from '../../../../src/components/ui/Chip';
 import { ListRow } from '../../../../src/components/ui/ListRow';
 import type { SafePayHistoryTransaction } from '../../../../src/services/safepayHistory.service';
 import { TC, tc } from '../../../../src/theme/colors';
+import { SafePayHistorySkeleton } from '../../../../src/components/skeletons/ScreenSkeletons';
 
 const money = (value: number) =>
   `${new Intl.NumberFormat('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value) || 0)} kr`;
@@ -472,7 +472,7 @@ export default function SafePayHistoryScreen() {
   if (query.isLoading)
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator message="Laster SafePay-historikk..." />
+        <SafePayHistorySkeleton />
       </SafeAreaView>
     );
   if (query.isError)

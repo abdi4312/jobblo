@@ -12,9 +12,9 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-    X, ShieldCheck, CheckCircle2, Circle, Clock, FileText, User, Calendar, Tag,
+    X, ShieldCheck, CheckCircle2, Circle, FileText, Calendar, Tag,
 } from 'lucide-react';
-import mainLink from '../../api/mainURLs';
+import { getCheckoutDetails } from '../../api/safePayAPI';
 
 interface ContractViewModalProps {
     orderId: string;
@@ -51,10 +51,7 @@ export function ContractViewModal({ orderId, trigger }: ContractViewModalProps) 
 
     const { data, isLoading, isError } = useQuery({
         queryKey: ['contract-view', orderId],
-        queryFn: async () => {
-            const res = await mainLink.get(`/api/safepay-checkout/details/${orderId}`);
-            return res.data;
-        },
+        queryFn: () => getCheckoutDetails(orderId),
         enabled: open && !!orderId,
         staleTime: 1000 * 60,
     });

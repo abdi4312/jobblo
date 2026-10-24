@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Briefcase } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminServices, useUpdateServiceStatus, useDeleteAdminService } from '../../hooks/admin';
@@ -67,8 +67,8 @@ export default function ServicesPage() {
         return img ? (
           <img src={img} alt={s.title} className="w-12 h-12 object-cover rounded-lg" />
         ) : (
-          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-            <Briefcase size={16} className="text-gray-300" />
+          <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
+            <Briefcase size={16} className="text-muted-foreground/60" />
           </div>
         );
       },
@@ -79,8 +79,8 @@ export default function ServicesPage() {
       header: 'Tittel',
       render: (s) => (
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-gray-800 truncate max-w-[200px]">{s.title}</p>
-          <p className="text-xs text-gray-400 truncate max-w-[200px]">
+          <p className="text-sm font-semibold text-foreground truncate max-w-[200px]">{s.title}</p>
+          <p className="text-xs text-muted-foreground truncate max-w-[200px]">
             {s.categories.slice(0, 2).join(', ')}
           </p>
         </div>
@@ -91,8 +91,8 @@ export default function ServicesPage() {
       header: 'Tilbyder',
       render: (s) => (
         <div>
-          <p className="text-sm text-gray-700">{s.userId?.name ?? '–'}</p>
-          <p className="text-xs text-gray-400">{s.userId?.email ?? ''}</p>
+          <p className="text-sm text-foreground">{s.userId?.name ?? '–'}</p>
+          <p className="text-xs text-muted-foreground">{s.userId?.email ?? ''}</p>
         </div>
       ),
     },
@@ -100,7 +100,7 @@ export default function ServicesPage() {
       key: 'price',
       header: 'Pris',
       render: (s) => (
-        <span className="font-semibold text-gray-800">{s.price.toLocaleString('nb-NO')} NOK</span>
+        <span className="font-semibold text-foreground">{s.price.toLocaleString('nb-NO')} NOK</span>
       ),
     },
     {
@@ -111,7 +111,7 @@ export default function ServicesPage() {
     {
       key: 'views',
       header: 'Visninger',
-      render: (s) => <span className="text-sm text-gray-600">{s.views}</span>,
+      render: (s) => <span className="text-sm text-muted-foreground">{s.views}</span>,
     },
     {
       key: 'date',
@@ -140,7 +140,7 @@ export default function ServicesPage() {
             onClick={() =>
               setStatusTarget({ service: s, newStatus: s.status === 'open' ? 'closed' : 'open' })
             }
-            className="px-2.5 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            className="px-2.5 py-1.5 text-xs font-medium text-muted-foreground bg-muted hover:bg-accent rounded-lg transition-colors"
             aria-label={`${s.status === 'open' ? 'Lukk' : 'Åpne'} ${s.title}`}
           >
             {s.status === 'open' ? 'Lukk' : 'Åpne'}

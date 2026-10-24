@@ -15,11 +15,11 @@ import {
 import { Card, SectionLabel } from '../../../../src/components/ui/Card';
 import { ConfirmDialog } from '../../../../src/components/ui/ConfirmDialog';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
-import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
 import { MEMBERSHIP_ENABLED } from '../../../../src/config/features';
 import type { CurrentSubscription, PurchaseHistoryItem, PurchaseStatus } from '../../../../src/services/subscription.service';
 import { TC, tc } from '../../../../src/theme/colors';
+import { SubscriptionSkeleton } from '../../../../src/components/skeletons/ScreenSkeletons';
 
 /*
  * Mirrors the web SubscriptionView (frontend/src/components/profile/SettingsViews/
@@ -131,7 +131,7 @@ function SubscriptionScreen() {
   };
 
   if (query.isLoading)
-    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator message="Laster abonnementet..." /></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><SubscriptionSkeleton /></SafeAreaView>;
   if (query.isError)
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">

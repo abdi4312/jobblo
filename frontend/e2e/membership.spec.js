@@ -162,6 +162,8 @@ async function openMembership(page, initialSubscription = null) {
       response = { url: 'https://checkout.stripe.com/c/pay/cs_test_mocked' };
     } else if (method === 'POST' && pathname === '/api/stripe/subscription/portal') {
       response = { url: 'https://billing.stripe.test/mock-portal' };
+    } else if (method === 'POST' && pathname === '/api/rum') {
+      response = { ok: true }; // real-user monitoring beacon, not part of the flow under test
     } else {
       unexpectedRequests.push({ method, pathname });
       await route.fulfill({

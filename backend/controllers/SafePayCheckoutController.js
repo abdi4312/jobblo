@@ -1543,17 +1543,24 @@ exports.approveAndPayout = async (req, res) => {
     await Service.findByIdAndUpdate(order.serviceId._id, { status: 'completed' });
 
     // ── SafePayHistory (idempotent) ────────────────────────────────────────────
-    const existingHistory = await SafePayHistory.findOne({ orderId: order._id });
-    if (!existingHistory) {
-      try {
-        // sanitize ratings for history (only include provided fields)
-        const sanitizedRatings = { overall: ratings.overall };
-        if (ratings.punctuality !== undefined) sanitizedRatings.punctuality = ratings.punctuality;
-        if (ratings.quality !== undefined) sanitizedRatings.quality = ratings.quality;
-        if (ratings.communication !== undefined)
-          sanitizedRatings.communication = ratings.communication;
-        if (ratings.tidiness !== undefined) sanitizedRatings.tidiness = ratings.tidiness;
+    // sanitize ratings for history (only include provided fields)
+    const sanitizedRatings = { overall: ratings.overall };
+    if (ratings.punctuality !== undefined) sanitizedRatings.punctuality = ratings.punctuality;
+    if (ratings.quality !== undefined) sanitizedRatings.quality = ratings.quality;
+    if (ratings.communication !== undefined)
+      sanitizedRatings.communication = ratings.communication;
+    if (ratings.tidiness !== undefined) sanitizedRatings.tidiness = ratings.tidiness;
 
+    const existingHistory = await SafePayHistory.findOne({ orderId: order._id });
+    if (existingHistory) {
+      // Payment confirmation creates the row as payment_received; approval must move it
+      // on, or SafePay history shows a completed, paid-out job as still in escrow.
+      await SafePayHistory.updateOne(
+        { _id: existingHistory._id, status: { $in: SafePayHistory.OPEN_STATUSES } },
+        { $set: { status: 'completed', ratings: sanitizedRatings, reviewComment: comment } }
+      );
+    } else {
+      try {
         await SafePayHistory.create({
           orderId: order._id,
           serviceId: order.serviceId._id,

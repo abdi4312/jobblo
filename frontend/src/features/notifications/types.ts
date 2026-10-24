@@ -25,7 +25,3 @@ export interface AlertType {
   createdAt: string;
   updatedAt: string;
 }
-
-export interface UnreadCountResponse {
-  count: number;
-}

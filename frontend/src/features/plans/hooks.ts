@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getPlans } from './api';
+import { getConfigByKey, getPlans } from './api';
 import type { Plan } from '../plans/types';
 
 export const usePlans = () => {
@@ -16,3 +16,10 @@ export const usePlans = () => {
     select: (data) => data?.filter((plan) => plan.isActive),
   });
 };
+
+export const useConfigByKey = (key: string) =>
+  useQuery<{ value?: unknown } | null>({
+    queryKey: ['config', key],
+    queryFn: () => getConfigByKey(key),
+    staleTime: 1000 * 60 * 5,
+  });

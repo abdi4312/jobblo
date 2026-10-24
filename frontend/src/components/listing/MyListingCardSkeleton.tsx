@@ -8,7 +8,7 @@
  * `prefers-reduced-motion`), so the swap to real content is a fill rather than a
  * re-layout: same surface, same 16:10 photo, same four lines under it.
  */
-export const MyListingCardSkeleton = () => (
+const MyListingCardSkeleton = () => (
   <div className="flex flex-col overflow-hidden rounded-3xl border border-[#E6E7E1] bg-white">
     <div className="jb-skeleton aspect-16/10" />
 
@@ -39,5 +39,3 @@ export const MyListingGridSkeleton = ({ count = 6 }: { count?: number }) => (
     ))}
   </div>
 );
-
-export default MyListingCardSkeleton;

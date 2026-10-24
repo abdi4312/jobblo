@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Eye, UserCheck, AlertTriangle, Shield, Clock, CheckCircle2, XCircle, Briefcase } from 'lucide-react';
@@ -72,11 +72,11 @@ export default function JobReportsPage() {
             render: (r) =>
                 r.serviceId ? (
                     <div>
-                        <p className="text-sm text-gray-800 line-clamp-1">{r.serviceId.title}</p>
-                        <p className="font-mono text-xs text-gray-400">{r.serviceId._id.slice(-8).toUpperCase()}</p>
+                        <p className="text-sm text-foreground line-clamp-1">{r.serviceId.title}</p>
+                        <p className="font-mono text-xs text-muted-foreground">{r.serviceId._id.slice(-8).toUpperCase()}</p>
                     </div>
                 ) : (
-                    <span className="text-gray-400">Slettet</span>
+                    <span className="text-muted-foreground">Slettet</span>
                 ),
         },
         {
@@ -85,11 +85,11 @@ export default function JobReportsPage() {
             render: (r) =>
                 r.reportedBy ? (
                     <div>
-                        <p className="text-sm text-gray-800">{r.reportedBy.name}</p>
-                        <p className="text-xs text-gray-400">{r.reportedBy.email}</p>
+                        <p className="text-sm text-foreground">{r.reportedBy.name}</p>
+                        <p className="text-xs text-muted-foreground">{r.reportedBy.email}</p>
                     </div>
                 ) : (
-                    <span className="text-gray-400">–</span>
+                    <span className="text-muted-foreground">–</span>
                 ),
         },
         {
@@ -98,18 +98,18 @@ export default function JobReportsPage() {
             render: (r) =>
                 r.reportedUser ? (
                     <div>
-                        <p className="text-sm text-gray-800">{r.reportedUser.name}</p>
-                        <p className="text-xs text-gray-400">{r.reportedUser.email}</p>
+                        <p className="text-sm text-foreground">{r.reportedUser.name}</p>
+                        <p className="text-xs text-muted-foreground">{r.reportedUser.email}</p>
                     </div>
                 ) : (
-                    <span className="text-gray-400">–</span>
+                    <span className="text-muted-foreground">–</span>
                 ),
         },
         {
             key: 'reportType',
             header: 'Type',
             render: (r) => (
-                <span className="text-xs text-gray-600">{r.reportType.replace(/_/g, ' ')}</span>
+                <span className="text-xs text-muted-foreground">{r.reportType.replace(/_/g, ' ')}</span>
             ),
         },
         {
@@ -122,7 +122,7 @@ export default function JobReportsPage() {
             header: 'Tildelt',
             render: (r) =>
                 r.assignedAdminId ? (
-                    <span className="text-xs text-gray-700">{r.assignedAdminId.name}</span>
+                    <span className="text-xs text-foreground">{r.assignedAdminId.name}</span>
                 ) : (
                     <span className="text-xs text-orange-500">Ikke tildelt</span>
                 ),
@@ -155,7 +155,7 @@ export default function JobReportsPage() {
                             <Link
                                 to={`/job-listing/${r.serviceId._id}`}
                                 target="_blank"
-                                className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-[#2d4a3e] bg-[#eef5f2] hover:bg-[#d7ece4] rounded-lg transition-colors"
+                                className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/15 rounded-lg transition-colors"
                             >
                                 <Briefcase size={11} aria-hidden="true" /> Se annonse
                             </Link>

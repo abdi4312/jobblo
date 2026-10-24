@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import styles from './CoinsPage.module.css';
 import { ProfileTitleWrapper } from '../../components/layout/body/profile/ProfileTitleWrapper';
 import { useUserStore } from '../../stores/userStore';
@@ -76,27 +77,20 @@ function getLevelInfo(points: number): Level {
 export default function CoinsPage() {
   const { fetchProfile } = useUserStore((state) => state);
   const user = useUserStore((state) => state.user);
-  const [rewards, setRewards] = useState<Reward[]>([]);
+  const { data: rewards = [] } = useQuery<Reward[]>({ queryKey: ['jobblo-shop'], queryFn: getJobbloShop });
+  // Update user pointsBalance after a purchase
+  const buyMutation = useMutation({ mutationFn: buyItem, onSuccess: () => fetchProfile() });
   const userCoins = user?.pointsBalance || 0;
   const levelInfo = getLevelInfo(userCoins);
 
   useEffect(() => {
     fetchProfile();
-
-    async function getRewards() {
-      const rewards: Reward[] = await getJobbloShop();
-      setRewards(rewards);
-    }
-
-    void getRewards();
   }, [fetchProfile]);
 
   const handleRedeem = async (rewardId: number, coinCost: number) => {
     if (userCoins >= coinCost) {
       // Handle redemption logic here
-      await buyItem(rewardId.toString());
-      // Update user pointsBalance
-      fetchProfile();
+      await buyMutation.mutateAsync(rewardId.toString());
     } else {
       toast.error('Du har ikke nok coins for denne belønningen.');
     }

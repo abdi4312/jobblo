@@ -983,51 +983,6 @@ async function cancelScheduledPlanChange(userId, overrides = {}) {
   }
 }
 
-async function syncCanonicalSubscription(context, subscription, plan, operationType = null) {
-  const period = periodOf(subscription);
-  const status = subscription.status === 'active'
-    ? subscription.cancel_at_period_end ? 'canceling' : 'active'
-    : subscription.status === 'canceled' ? 'canceled'
-      : ['past_due', 'unpaid', 'paused'].includes(subscription.status) ? 'past_due'
-        : subscription.status === 'incomplete_expired' ? 'expired'
-          : 'pending';
-  await context.SubscriptionModel.updateOne(
-    { _id: context.record._id },
-    {
-      $set: {
-        planId: plan._id,
-        planType: plan.type,
-        stripePriceId: idOf(period.item.price),
-        status,
-        currentPeriodStart: period.start,
-        currentPeriodEnd: period.end,
-        nextRenewalAt: period.end,
-        autoRenew: !subscription.cancel_at_period_end && subscription.status === 'active',
-        cancellationEffectiveAt: subscription.cancel_at_period_end
-          ? dateOf(subscription.cancel_at) || period.end
-          : null,
-        ...(subscription.status === 'canceled' ? { pendingPlanChange: null } : {}),
-      },
-    }
-  );
-  if (operationType) {
-    const operation = await context.OperationModel.findOne({
-      userId: context.record.userId,
-      stripeSubscriptionId: context.record.stripeSubscriptionId,
-      operationType,
-      status: { $in: ['pending', 'reconciliation_required'] },
-      lifecycleLock: true,
-    });
-    if (operation) {
-      await completeOperation(context, operation, {
-        stripeSubscriptionId: subscription.id,
-        stripePriceId: idOf(period.item.price),
-      });
-    }
-  }
-  return { planId: plan._id, status, period };
-}
-
 module.exports = {
   SubscriptionManagementError,
   getSubscriptionContext,
@@ -1040,7 +995,6 @@ module.exports = {
   cancelScheduledPlanChange,
   resumeSubscription,
   changePlan,
-  syncCanonicalSubscription,
   stripePriceIsMonthlyNok,
   periodOf,
 };

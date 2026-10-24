@@ -16,7 +16,17 @@ import {
 import { toast } from 'react-hot-toast';
 import { usePlans } from '../../features/plans/hooks';
 import { useUserStore } from '../../stores/userStore';
-import mainLink from '../../api/mainURLs';
+import {
+  cancelSubscription,
+  changeSubscription,
+  createCheckoutSession,
+  getMySubscription,
+  getSubscriptionBillingHistory,
+  getSubscriptionInvoicePdf,
+  openSubscriptionPortal,
+  previewSubscriptionChange,
+  resumeSubscription,
+} from '../../api/stripeAPI';
 import type { Plan } from '../../features/plans/types';
 import { CARD, MICRO_LABEL } from '../../theme/brand';
 import { BackLink } from '../../components/Ui/BackLink';
@@ -135,20 +145,19 @@ export default function MembershipPage() {
   // renewal was to ask support to do it from the Stripe dashboard.
   const { data: mySub } = useQuery<MySubscription | null>({
     queryKey: ['my-subscription'],
-    queryFn: async () => (await mainLink.get('/api/stripe/subscription')).data.subscription,
+    queryFn: getMySubscription,
     staleTime: 30_000,
   });
 
   const { data: billingHistory } = useQuery<BillingHistory>({
     queryKey: ['subscription-billing-history'],
-    queryFn: async () =>
-      (await mainLink.get('/api/stripe/subscription/billing-history?mode=all')).data,
+    queryFn: () => getSubscriptionBillingHistory('all'),
     enabled: Boolean(mySub?.stripeSubscriptionId),
     staleTime: 60_000,
   });
 
   const cancelMutation = useMutation({
-    mutationFn: async () => (await mainLink.post('/api/stripe/subscription/cancel')).data,
+    mutationFn: cancelSubscription,
     onSuccess: (data) => {
       toast.success(data?.message || 'Abonnementet avsluttes ved periodens slutt');
       queryClient.invalidateQueries({ queryKey: ['my-subscription'] });
@@ -158,7 +167,7 @@ export default function MembershipPage() {
   });
 
   const resumeMutation = useMutation({
-    mutationFn: async () => (await mainLink.post('/api/stripe/subscription/resume')).data,
+    mutationFn: resumeSubscription,
     onSuccess: (data) => {
       toast.success(data?.message || 'Abonnementet fortsetter');
       queryClient.invalidateQueries({ queryKey: ['my-subscription'] });
@@ -168,7 +177,7 @@ export default function MembershipPage() {
   });
 
   const portalMutation = useMutation({
-    mutationFn: async () => (await mainLink.post('/api/stripe/subscription/portal')).data,
+    mutationFn: openSubscriptionPortal,
     onSuccess: (data) => {
       if (data?.url) window.location.assign(data.url);
       else toast.error('Kunne ikke åpne abonnementsadministrasjonen.');
@@ -259,12 +268,7 @@ export default function MembershipPage() {
   const { data: planChangePreview, isFetching: isPreviewFetching, isError: previewFailed } =
     useQuery<PlanChangePreview>({
       queryKey: ['subscription-plan-change-preview', mySub?.stripeSubscriptionId, selectedPlan?._id],
-      queryFn: async () =>
-        (
-          await mainLink.post('/api/stripe/subscription/change/preview', {
-            planId: selectedPlan?._id,
-          })
-        ).data,
+      queryFn: () => previewSubscriptionChange(selectedPlan?._id),
       enabled: canChangePlan,
       retry: false,
     });
@@ -293,12 +297,7 @@ export default function MembershipPage() {
           };
 
   const changePlanMutation = useMutation({
-    mutationFn: async () =>
-      (
-        await mainLink.post('/api/stripe/subscription/change', {
-          planId: selectedPlan?._id,
-        })
-      ).data,
+    mutationFn: () => changeSubscription(selectedPlan?._id),
     onSuccess: (data) => {
       toast.success(data?.message || 'Planendringen er sendt til Stripe');
       queryClient.invalidateQueries({ queryKey: ['my-subscription'] });
@@ -308,6 +307,9 @@ export default function MembershipPage() {
     onError: (err: any) =>
       toast.error(err?.response?.data?.message || 'Kunne ikke endre abonnementet'),
   });
+
+  const checkoutMutation = useMutation({ mutationFn: createCheckoutSession });
+  const invoicePdfMutation = useMutation({ mutationFn: getSubscriptionInvoicePdf });
 
   const selectPlan = (id: string) => {
     setSelectedId(id);
@@ -319,11 +321,9 @@ export default function MembershipPage() {
     if (!selectedPlan || !canCheckout) return;
     setIsRedirecting(true);
     try {
-      const res = await mainLink.post('/api/stripe/create-checkout-session', {
-        planId: selectedPlan._id,
-      });
-      if (!res.data?.url) throw new Error('Ingen betalingslenke i svaret');
-      window.location.href = res.data.url;
+      const res = await checkoutMutation.mutateAsync(selectedPlan._id);
+      if (!res?.url) throw new Error('Ingen betalingslenke i svaret');
+      window.location.href = res.url;
     } catch (err: any) {
       // The endpoint returns a Norwegian `message` for the cases the user can act on —
       // an expired coupon, a plan that costs nothing. Swallowing it and always saying
@@ -697,10 +697,8 @@ export default function MembershipPage() {
                                 className="shrink-0 font-semibold text-[#2E6641] underline"
                                 onClick={async () => {
                                   try {
-                                    const response = await mainLink.get(
-                                      `/api/stripe/subscription/invoices/${encodeURIComponent(invoice.id)}/pdf?mode=${invoice.mode}`
-                                    );
-                                    if (response.data?.url) window.location.assign(response.data.url);
+                                    const response = await invoicePdfMutation.mutateAsync({ id: invoice.id, mode: invoice.mode });
+                                    if (response?.url) window.location.assign(response.url);
                                   } catch {
                                     toast.error('Fakturaen kunne ikke åpnes.');
                                   }

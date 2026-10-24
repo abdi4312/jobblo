@@ -35,7 +35,7 @@ run('password reset and OTP hardening (real MongoDB)', () => {
   let user;
 
   beforeAll(async () => {
-    await mongoose.connect(uri);
+    await mongoose.connect(uri, { dbName: 'jobblo-test-password-reset' }); // own db: suites drop it in parallel
   });
   afterAll(async () => {
     await mongoose.connection.dropDatabase();

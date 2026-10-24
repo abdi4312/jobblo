@@ -52,6 +52,13 @@ export const setupInterceptors = (instance: AxiosInstance) => {
         return Promise.reject(error);
       }
 
+      // Admin / developer session that has not entered its authenticator code yet.
+      if (error.response?.status === 403 && (error.response?.data as { code?: string })?.code === 'MFA_REQUIRED' && !window.location.pathname.startsWith('/mfa')) {
+        const here = window.location.pathname + window.location.search;
+        window.location.assign(`/mfa?next=${encodeURIComponent(here)}`);
+        return Promise.reject(error);
+      }
+
       if (error.response?.status === 401 && !originalRequest._retry) {
         const errorData = error.response?.data as { code?: string };
 

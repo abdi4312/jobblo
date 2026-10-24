@@ -1,6 +1,5 @@
 // ─── Canonical roles ────────────────────────────────────────────────────────
-export type UserRole = 'user' | 'provider' | 'company' | 'superAdmin';
-export const ASSIGNABLE_ROLES: UserRole[] = ['user', 'provider', 'company'];
+export type UserRole = 'user' | 'provider' | 'company' | 'superAdmin' | 'developer';
 
 // ─── Pagination ──────────────────────────────────────────────────────────────
 export interface Pagination {
@@ -63,7 +62,7 @@ export interface AdminActivity {
 }
 
 // ─── Dashboard overview ───────────────────────────────────────────────────────
-export interface StatValue {
+interface StatValue {
     value: number;
     thisMonth?: number;
     change?: number | null; // percentage vs previous period, null when no prior data

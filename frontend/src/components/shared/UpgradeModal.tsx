@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import mainLink from '../../api/mainURLs';
+import { useStripeMutation } from '../../features/jobDetail/hook';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -50,6 +50,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
 }) => {
   const navigate = useNavigate();
   const [buying, setBuying] = useState(false);
+  const extraContactMutation = useStripeMutation();
 
   if (!isOpen) return null;
 
@@ -57,7 +58,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
     if (!serviceId) return;
     setBuying(true);
     try {
-      const { data } = await mainLink.post<{ url: string }>('/api/stripe/create-extra-contact-payment', { serviceId });
+      const data = await extraContactMutation.mutateAsync({ serviceId });
       window.location.assign(data.url);
     } catch (err) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;

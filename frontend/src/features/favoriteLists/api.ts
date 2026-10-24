@@ -37,6 +37,11 @@ export const favoriteListsApi = {
     return response.data;
   },
 
+  addContributors: async (listId: string, userIds: string[]): Promise<FavoriteList> => {
+    const response = await mainLink.post(`/api/lists/${listId}/contributors`, { userIds });
+    return response.data;
+  },
+
   removeContributor: async (listId: string, userId: string): Promise<FavoriteList> => {
     const response = await mainLink.delete(`/api/lists/${listId}/contributors/${userId}`);
     return response.data;

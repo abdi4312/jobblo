@@ -1,29 +1,7 @@
 import mainLink from '../mainURLs';
 import type { ApiResponse } from '../../types/admin';
 
-// ── Feature Flags ────────────────────────────────────────────────────────────────
-export interface FeatureFlag {
-    key: string;
-    value: boolean;
-    description?: string;
-}
-
-export const fetchFeatureFlags = async (): Promise<FeatureFlag[]> => {
-    const res = await mainLink.get<ApiResponse<{ flags: FeatureFlag[] }>>('/api/admin/feature-flags');
-    return res.data.data.flags;
-};
-
-export const toggleFeatureFlag = async (key: string, enabled: boolean): Promise<FeatureFlag> => {
-    const res = await mainLink.put<ApiResponse<FeatureFlag>>('/api/admin/feature-flags/toggle', { key, enabled });
-    return res.data.data;
-};
-
 // ── Global Config ────────────────────────────────────────────────────────────────
-export interface GlobalConfigEntry {
-    key: string;
-    value: unknown;
-    description?: string;
-}
 
 export const fetchAllConfigs = async (): Promise<Record<string, unknown>> => {
     const res = await mainLink.get<ApiResponse<{ configs: Record<string, unknown> }>>('/api/admin/config');

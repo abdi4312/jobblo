@@ -390,6 +390,10 @@ exports.getStatus = async (req, res) => {
 };
 
 // ── internal helper ───────────────────────────────────────────────────────────
+// Also used by the developer Connect Health Center to resync a provider's flags.
+exports.syncAccountFields = (...args) => _syncAccountFields(...args);
+exports.accountFieldForMode = accountFieldForMode;
+
 async function _syncAccountFields(user, account, testMode) {
   validateAccountOwner(account, user._id);
   return persistConnectAccount(user, account, testMode);

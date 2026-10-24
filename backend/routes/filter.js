@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const filterController = require('../controllers/filterController');
+const { cacheJson } = require('../utils/cache');
 
 /**
  * @swagger
@@ -23,7 +24,8 @@ const filterController = require('../controllers/filterController');
  *       500:
  *         description: Serverfeil ved henting av filtervalg
  */
-router.get('/options', filterController.getFilterOptions);
+// Job counts per category change all the time: a short cache absorbs bursts of page loads.
+router.get('/options', cacheJson('filter-options', 30), filterController.getFilterOptions);
 
 /**
  * @swagger

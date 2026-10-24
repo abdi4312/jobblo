@@ -66,7 +66,7 @@ export default function MaintenanceModePage() {
         actions={
           <button
             onClick={() => refetch()}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-foreground bg-muted hover:bg-accent rounded-md transition-colors"
           >
             <RefreshCw size={16} />
             Oppdater
@@ -75,7 +75,7 @@ export default function MaintenanceModePage() {
       />
 
       {enabled && (
-        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-sm">
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
           <AlertTriangle size={20} className="shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold">Vedlikeholdsmodus er aktiv</p>
@@ -86,36 +86,36 @@ export default function MaintenanceModePage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-5">
+      <div className="bg-card rounded-lg border border-border p-5 space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-gray-800">Aktiver vedlikeholdsmodus</p>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-sm font-semibold text-foreground">Aktiver vedlikeholdsmodus</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
               Slå på for å hindre brukertilgang mens du gjør endringer
             </p>
           </div>
           <button
             onClick={handleToggle}
-            className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${
-              enabled ? 'bg-red-500' : 'bg-gray-200'
+            className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring/50 ${
+              enabled ? 'bg-red-500' : 'bg-muted'
             }`}
             role="switch"
             aria-checked={enabled}
             aria-label={enabled ? 'Deaktiver vedlikeholdsmodus' : 'Aktiver vedlikeholdsmodus'}
           >
             <span
-              className={`pointer-events-none inline-flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ease-in-out ${
+              className={`pointer-events-none inline-flex h-6 w-6 items-center justify-center rounded-full bg-card shadow-sm ring-0 transition-transform duration-200 ease-in-out ${
                 enabled ? 'translate-x-5' : 'translate-x-0'
               }`}
             >
-              <Wrench size={14} className={enabled ? 'text-red-500' : 'text-gray-400'} />
+              <Wrench size={14} className={enabled ? 'text-red-500' : 'text-muted-foreground'} />
             </span>
           </button>
         </div>
 
         {enabled && (
           <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700">
+            <label className="block text-sm font-semibold text-foreground">
               Vedlikeholdsmelding
             </label>
             <textarea
@@ -123,9 +123,9 @@ export default function MaintenanceModePage() {
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
               placeholder="Skriv inn en melding som vises for brukerne..."
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 focus:border-transparent resize-y"
+              className="w-full rounded-md border border-border px-4 py-3 text-sm text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-transparent resize-y"
             />
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-muted-foreground">
               Denne meldingen vises på innloggingssiden når vedlikeholdsmodus er aktiv.
             </p>
           </div>
@@ -135,7 +135,7 @@ export default function MaintenanceModePage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-[#2d4a3e] hover:bg-[#233b31] disabled:opacity-50 rounded-xl transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary/90 disabled:opacity-50 rounded-md transition-colors"
           >
             <Save size={16} />
             {saving ? 'Lagrer...' : 'Lagre'}

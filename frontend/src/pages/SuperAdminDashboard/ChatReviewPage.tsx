@@ -165,7 +165,7 @@ export default function ChatReviewPage() {
             />
 
             {/* Privacy notice */}
-            <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-100 rounded-2xl text-sm text-blue-700">
+            <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-700">
                 <Shield size={16} className="shrink-0 text-blue-500" aria-hidden="true" />
                 <span>
                     Chatter vises ikke automatisk. Skriv inn et eksakt Chat ID og oppgi en
@@ -174,7 +174,7 @@ export default function ChatReviewPage() {
             </div>
 
             {/* Search form — always visible */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="bg-card rounded-lg border border-border p-5">
                 <ChatIdSearchForm
                     onSearch={handleSearch}
                     defaultValue={urlChatId}
@@ -200,7 +200,7 @@ export default function ChatReviewPage() {
             {chatQuery.isFetching ? (
                 <div className="flex items-center justify-center py-20">
                     <span
-                        className="w-8 h-8 border-4 border-[#2d4a3e]/20 border-t-[#2d4a3e] rounded-full animate-spin"
+                        className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"
                         role="status"
                         aria-label="Laster chat…"
                     />

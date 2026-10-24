@@ -19,12 +19,12 @@ export interface AISmartFillContext {
   existingUrgent?: boolean;
 }
 
-export interface AIDuration {
+interface AIDuration {
   value: number;
   unit: 'minutes' | 'hours' | 'days';
 }
 
-export interface AIJobListingResponse {
+interface AIJobListingResponse {
   success: boolean;
   data: {
     title: string;
@@ -53,7 +53,7 @@ export interface AIJobListingResponse {
   validationErrors?: string[];
 }
 
-export interface AIImageJobResponse {
+interface AIImageJobResponse {
   success: boolean;
   data: {
     title: string;
@@ -100,5 +100,16 @@ export const generateFullJobListing = async (
     existingEquipment: ctx.existingEquipment,
     existingUrgent: ctx.existingUrgent,
   });
+  return response.data;
+};
+
+// Inline-form helpers used by CreateJobForm/BasicInformation. Payloads are passed through as-is.
+export const generateJobInfo = async (payload: Record<string, unknown>) => {
+  const response = await mainLink.post('/api/ai/generate-job-info', payload);
+  return response.data;
+};
+
+export const generateJobTitle = async (payload: Record<string, unknown>) => {
+  const response = await mainLink.post('/api/ai/generate-title', payload);
   return response.data;
 };

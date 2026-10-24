@@ -112,6 +112,13 @@ const serviceSchema = new mongoose.Schema(
       default: 'utstyrfri',
     },
 
+    /** "Ny annonse" choice: a private job or a job for a business (shown on the listing). */
+    customerType: {
+      type: String,
+      enum: ['private', 'business'],
+      default: 'private',
+    },
+
     views: { type: Number, default: 0 },
     maxApplicants: { type: Number, default: 0 }, // 0 means unlimited
     timeEntries: [timeEntrySchema],
@@ -132,5 +139,12 @@ const serviceSchema = new mongoose.Schema(
 
 serviceSchema.index({ location: '2dsphere' });
 serviceSchema.index({ createdAt: -1 });
+// The public job list filters on status (PUBLIC_SERVICE_STATUSES) and sorts by date or price
+// (utils/serviceSort.js). With only { createdAt } Mongo walked every listing — completed and
+// cancelled ones included — to find the first public page. These answer it from the index.
+serviceSchema.index({ status: 1, createdAt: -1 });
+serviceSchema.index({ status: 1, price: 1, createdAt: -1 });
+serviceSchema.index({ categories: 1, status: 1, createdAt: -1 });
+serviceSchema.index({ userId: 1, createdAt: -1 }); // "my posted jobs", profile listings
 
 module.exports = mongoose.model('Service', serviceSchema);

@@ -11,7 +11,7 @@ const { parsePagination, parseObjectId, parseSort, parseDate } = require('../../
 const { logActivity } = require('../../services/admin/activityService');
 
 // Allowed role values — canonical set. All roles assignable via admin.
-const ALL_ROLES = ['user', 'provider', 'company', 'superAdmin'];
+const ALL_ROLES = ['user', 'provider', 'company', 'superAdmin', 'developer'];
 
 // Fields never returned in user lists or details
 const SENSITIVE_SELECT = '-password -passwordResetToken -passwordResetExpires';

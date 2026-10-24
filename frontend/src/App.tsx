@@ -76,7 +76,12 @@ export default function App() {
         <ScrollToTop />
         <CookieBanner />
         {!isAuthPage && <Header />}
-        <Outlet />
+        {/* At least one screen tall, so the footer starts below the fold. Without it the footer
+            sat right under a redirect, the session check or a short skeleton, then jumped down
+            when the page arrived — the main source of layout shift (CLS 0.2–1.8 per load). */}
+        <div className={isMessagesPage || isAuthPage ? undefined : 'min-h-screen'}>
+          <Outlet />
+        </div>
         {!isMessagesPage && !isAuthPage && <Footer />}
       </AntApp>
     </>

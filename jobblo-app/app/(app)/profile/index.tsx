@@ -31,8 +31,8 @@ import { loadThemePreference, setThemePreference, type ThemePreference } from '.
 import { useAuthStore } from '../../../src/store/authStore';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { ConfirmDialog } from '../../../src/components/ui/ConfirmDialog';
-import { ProfileSkeleton } from '../../../src/components/domain/ProfileSkeleton';
 import { TC, tc } from '../../../src/theme/colors';
+import { MinJobbloSkeleton } from '../../../src/components/skeletons/ScreenSkeletons';
 
 /**
  * "Min Jobblo", in the FINN app's "Min FINN" layout: a centred title, one card with the
@@ -93,7 +93,7 @@ export default function ProfileScreen() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const version = Constants.expoConfig?.version;
   const updateProfile = useUpdateProfile();
-  const cardRef = useRef<View | null>(null);
+  const cardRef = useRef<React.ComponentRef<typeof View>>(null);
   const [anchor, setAnchor] = useState<PopoverAnchor | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   // Utseende: same setting as Innstillinger → Utseende (saved on the device).
@@ -158,7 +158,7 @@ export default function ProfileScreen() {
   if (isLoading)
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <ProfileSkeleton />
+        <MinJobbloSkeleton />
       </SafeAreaView>
     );
   if (isError || !profile)
