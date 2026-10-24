@@ -1,9 +1,9 @@
 const express = require('express');
-const rateLimit = require('express-rate-limit');
+const { makeLimiter } = require('../middleware/rateLimiter');
 const campaignController = require('../controllers/campaignController');
 
 const router = express.Router();
-const campaignEventLimiter = rateLimit({
+const campaignEventLimiter = makeLimiter('campaign-events', {
   windowMs: 60 * 1000,
   max: 60,
   standardHeaders: true,

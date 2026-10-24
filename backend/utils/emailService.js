@@ -1,4 +1,6 @@
 const nodemailer = require('nodemailer');
+const { maskEmail } = require('../services/monitoring/securityEvents');
+const { logDelivery } = require('../services/monitoring/deliveryLog');
 
 /**
  * Creates and returns a configured nodemailer transporter.
@@ -14,6 +16,22 @@ const createTransporter = () => {
     },
   });
 };
+
+/** sendMail plus a DeliveryLog row for the developer dashboard; logging never affects delivery. */
+async function sendLogged(transporter, options) {
+  const started = Date.now();
+  const log = (fields) =>
+    logDelivery({ channel: 'email', template: String(options.subject || '').slice(0, 200), to: maskEmail(options.to), latencyMs: Date.now() - started, ...fields });
+  try {
+    require('../services/monitoring/faults').assertNoFault('email'); // staging failure simulator only
+    const info = await transporter.sendMail(options);
+    log({ status: info?.rejected?.length ? 'partial' : 'sent', accepted: info?.accepted?.length ?? null, rejected: info?.rejected?.length ?? null });
+    return info;
+  } catch (err) {
+    log({ status: 'failed', error: String(err.message || err).slice(0, 300), errorCode: err.code || err.responseCode?.toString() || null });
+    throw err;
+  }
+}
 
 const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (character) => ({
   '&': '&amp;',
@@ -84,7 +102,7 @@ async function sendSubscriptionRecoveryEmail({
     : '';
   const transporter = createTransporter();
 
-  await transporter.sendMail({
+  await sendLogged(transporter, {
     from: `"Jobblo" <${process.env.SMTP_USER}>`,
     to,
     subject: copy.subject,
@@ -112,7 +130,7 @@ async function sendSubscriptionRecoveryEmail({
  * @param {string} otp - 6-digit OTP code
  * @param {string} userName - Recipient's name
  */
-const sendOtpEmail = async (toEmail, otp, userName) => {
+const deliverOtpEmail = async (toEmail, otp, userName) => {
   const transporter = createTransporter();
 
   // Split OTP into individual digits for styled boxes
@@ -196,7 +214,30 @@ const sendOtpEmail = async (toEmail, otp, userName) => {
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+  await sendLogged(transporter, mailOptions);
 };
 
-module.exports = { sendOtpEmail, sendSubscriptionRecoveryEmail };
+/** Plain-text incident alert for the on-call developer (DEV_ALERT_EMAIL). */
+async function sendDevAlertEmail(to, incident) {
+  const transporter = createTransporter();
+  await sendLogged(transporter, {
+    from: `"Jobblo Alerts" <${process.env.SMTP_USER}>`,
+    to,
+    subject: `[${String(incident.severity).toUpperCase()}] ${incident.title}`,
+    text: [incident.title, '', incident.detail || '', '', `Service: ${incident.service || '-'}`, `Started: ${new Date(incident.startedAt).toISOString()}`, `Incident: ${incident._id}`].join('\n'),
+  });
+}
+
+/**
+ * Send a one-time code through the email queue (services/queue): returns as soon as the job
+ * is queued, retried with backoff if SMTP fails. Answering at the same speed whether or not
+ * the address exists also closes the timing leak in "forgot password". The code is sealed in
+ * the job payload. Use deliverOtpEmail when the caller must know the email went out.
+ */
+async function sendOtpEmail(toEmail, otp, userName) {
+  const { enqueue } = require('../services/queue');
+  const { sealOtp } = require('../services/queue/handlers');
+  return enqueue('email', 'otp', { to: toEmail, name: userName || null, otpSealed: sealOtp(otp) }, { attempts: 3 });
+}
+
+module.exports = { sendOtpEmail, deliverOtpEmail, sendSubscriptionRecoveryEmail, sendDevAlertEmail };

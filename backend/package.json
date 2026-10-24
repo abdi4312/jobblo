@@ -5,9 +5,10 @@
   "scripts": {
     "build": "tsc",
     "dev": "ts-node-dev --respawn --transpile-only server.js",
-    "start": "node server.js",
+    "start": "nodemon server.js",
     "test": "jest --forceExit --detectOpenHandles",
     "test:ci": "jest --ci --forceExit --detectOpenHandles",
+    "test:quality": "jest --ci --forceExit --detectOpenHandles --json --outputFile=jest-results.json --coverage --coverageReporters=json-summary --collectCoverageFrom=controllers/**/*.js --collectCoverageFrom=routes/**/*.js --collectCoverageFrom=middleware/**/*.js --collectCoverageFrom=services/**/*.js",
     "test:coverage": "jest --coverage --collectCoverageFrom=controllers/**/*.js --collectCoverageFrom=routes/**/*.js --collectCoverageFrom=middleware/**/*.js --forceExit --detectOpenHandles",
     "check:payments": "node scripts/check-payment-config.js",
     "e2e:flow": "node scripts/e2e-job-flow.js",
@@ -16,9 +17,11 @@
   },
   "dependencies": {
     "@azure/storage-blob": "^12.29.1",
+    "@socket.io/redis-adapter": "^8.3.0",
     "axios": "^1.13.2",
     "bcryptjs": "^2.4.3",
     "body-parser": "^2.3.0",
+    "bullmq": "^6.4.1",
     "connect-mongo": "6.0.0",
     "cookie-parser": "~1.4.4",
     "cors": "^2.8.5",
@@ -31,6 +34,7 @@
     "express-useragent": "^2.1.0",
     "firebase-admin": "^14.3.0",
     "http-errors": "~1.6.3",
+    "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.20.1",
     "morgan": "^1.12.1",
@@ -40,6 +44,7 @@
     "openid-client": "6.8.5",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
+    "rate-limit-redis": "^6.0.1",
     "request-ip": "^3.3.0",
     "sharp": "0.35.5",
     "socket.io": "^4.8.1",
@@ -59,7 +64,7 @@
     "typescript": "^5.9.3"
   },
   "description": "This is the backend for the Jobblo app. It provides RESTful APIs.",
-  "main": "main.js",
+  "main": "server.js",
   "keywords": [],
   "author": "",
   "license": "ISC"
