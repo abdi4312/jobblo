@@ -410,7 +410,7 @@ describe('14. OAuth placeholder passwords cannot authenticate', () => {
 
   it('login refuses any stored value that is not a bcrypt hash', () => {
     const source = stripComments(
-      fs.readFileSync(path.join(__dirname, '..', 'controllers', 'authController.js'), 'utf8')
+      fs.readdirSync(path.join(__dirname, '..', 'controllers', 'auth')).map((f) => fs.readFileSync(path.join(__dirname, '..', 'controllers', 'auth', f), 'utf8')).join('\n') // the controller is split into controllers/auth
     );
 
     expect(source).toMatch(

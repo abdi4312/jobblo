@@ -13,7 +13,7 @@ run('SafePay concurrency on a real MongoDB', () => {
   const id = () => new mongoose.Types.ObjectId();
 
   beforeAll(async () => {
-    await mongoose.connect(uri);
+    await mongoose.connect(uri, { dbName: 'jobblo-test-safepay-concurrency' }); // own db: suites drop it in parallel
     await mongoose.connection.db.dropDatabase();
     Order = require('../models/Order');
     Service = require('../models/Service');
