@@ -85,7 +85,8 @@ const isJson = (text) => (json(text) === undefined ? 'Response is not JSON' : nu
 
 /** Built-in probes. Each returns the list of steps it ran (stops at the first failure). */
 const BUILT_IN = [
-  { key: 'api', name: 'API root', describe: 'GET / answers with JSON', run: ({ api }) => [step('GET /', `${api}/`, { expect: isJson })] },
+  // An /api route, not "/": behind nginx "/" is the web app, so a public SYNTHETIC_API_URL would always read as down.
+  { key: 'api', name: 'API', describe: 'GET /api/filter/options answers with JSON', run: ({ api }) => [step('GET /api/filter/options', `${api}/api/filter/options`, { expect: isJson })] },
   { key: 'services', name: 'Job listing', describe: 'GET /api/services returns JSON', run: ({ api }) => [step('GET /api/services', `${api}/api/services?limit=1`, { expect: isJson })] },
   { key: 'categories', name: 'Categories', describe: 'GET /api/categories returns JSON', run: ({ api }) => [step('GET /api/categories', `${api}/api/categories`, { expect: isJson })] },
   {
