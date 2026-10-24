@@ -128,7 +128,6 @@ exports.applyFilters = async (req, res) => {
       verifiedProvidersOnly,
       searchKeyword,
       sortBy,
-      type,
       countyCodes,
       municipalityCodes,
       areaCodes,
@@ -188,11 +187,6 @@ exports.applyFilters = async (req, res) => {
         { categories: regex },
         { tags: regex },
       ];
-    }
-
-    // TYPE ANNONSE (If your model supports this, otherwise we can add it or ignore)
-    if (type) {
-      // query.type = type;
     }
 
     // SORT LOGIC — shared with GET /api/services so the two endpoints cannot answer

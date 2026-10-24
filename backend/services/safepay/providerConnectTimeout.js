@@ -24,7 +24,6 @@ const ACTIVE_DISPUTE_STATUSES = [
   'waiting_for_provider',
   'evidence_submitted',
 ];
-const ACTIVE_TIMEOUT_STATES = ['processing', 'pending', 'reconciliation_required', 'failed', 'manual_review'];
 
 function idOf(value) {
   return typeof value === 'string' ? value : value?.id || null;
@@ -843,7 +842,6 @@ async function applyTimeoutRefundResult(order, payment, operation, refund, statu
 
 module.exports = {
   CANCEL_REASON,
-  ACTIVE_TIMEOUT_STATES,
   verifyCapturedPayment,
   providerIsPayoutReady,
   completeTimeoutRefund,
