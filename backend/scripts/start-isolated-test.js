@@ -56,6 +56,8 @@ async function main() {
     ENABLE_SCHEDULER: 'false',
     NODE_ENV: 'test',
     VITE_MAIN_URL: isolatedApiUrl,
+    // The Playwright frontend (playwright.config.js) — without it every real browser call is refused by CORS.
+    ALLOWED_ORIGINS: ['http://127.0.0.1:5176', process.env.ALLOWED_ORIGINS].filter(Boolean).join(','),
     STRIPE_SECRET_KEY: '',
     STRIPE_WEBHOOK_SECRET: '',
   };
