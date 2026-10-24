@@ -1,6 +1,7 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 import * as Device from 'expo-device';
 import { authStorage as storage } from '../utils/authStorage';
+import { monitorAxios } from '../monitoring/reporter';
 
 /**
  * This phone's model for the "Aktive økter" list, e.g. "iPhone 15 Pro" or "Samsung SM-S911B".
@@ -224,5 +225,8 @@ apiClient.interceptors.response.use(
     return apiClient(config);
   }
 );
+
+// Failed (5xx / network) and slow calls → developer dashboard "Mobile App".
+monitorAxios(apiClient);
 
 export default apiClient;
