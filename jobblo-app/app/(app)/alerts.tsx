@@ -381,7 +381,7 @@ export default function AlertsScreen() {
     <View className="items-center py-4">
       <Button label="Vis flere" variant="secondary" small onPress={() => fetchNextPage()} />
     </View>
-  ) : null;
+  ) :undefined;
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>

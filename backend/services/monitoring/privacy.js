@@ -162,7 +162,7 @@ async function exportUser(userId) {
     // Only the messages this person wrote: the other party's messages are their personal data.
     db().collection('chats').aggregate([{ $match: { $or: [{ clientId: id }, { providerId: id }] } }, { $project: { serviceId: 1, createdAt: 1, messages: { $filter: { input: { $ifNull: ['$messages', []] }, cond: { $eq: ['$$this.senderId', id] } } } } }, { $limit: 2000 }]).toArray(),
     find('notifications', { userId: id }),
-    find('sessions', { userId: id }, { refreshToken: 0, token: 0, tokenHash: 0 }),
+    find('sessions', { userId: id }, { refreshToken: 0, oldRefreshToken: 0, token: 0, tokenHash: 0 }),
     find('supporttickets', { userId: id }, { notes: 0, timeline: 0, assignee: 0 }),
     find('jobrequests', { providerId: id }),
     find('subscription_v2', { userId: id }),

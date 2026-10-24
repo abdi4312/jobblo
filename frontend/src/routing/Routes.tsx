@@ -10,30 +10,6 @@ import { SettingsLayout } from '../components/layout/SettingsLayout/SettingsLayo
 import { RouteErrorElement } from '../components/ErrorBoundary.tsx';
 import { PageLoader } from '../components/Loading/PageLoader.tsx';
 
-import {
-  UsernameView,
-  NameView,
-  BioView,
-  PictureView,
-  BannerView,
-  EmailView,
-  PhoneView,
-  AddressesView,
-  PasswordView,
-  DeleteAccountView,
-  LocationView,
-  UpcomingPreviewView,
-  VisibilityView,
-  BlockedUsersView,
-  CookiesView,
-  SessionsView,
-  AboutView,
-  SubscriptionView,
-  NotificationsView,
-  SeekerSettingsView,
-  SafePayHistoryView,
-  PayoutSettingsView,
-} from '../components/profile/SettingsViews';
 
 import OAuthSuccess from '../pages/OAuthSuccess.tsx';
 import SettingsPage from '../pages/SettingsPage.tsx';
@@ -50,6 +26,33 @@ const withSuspense = (Component: React.ComponentType) => (
     <Component />
   </Suspense>
 );
+
+// Settings screens load with the settings area, not with every page: they pull in Google
+// Maps (addresses), the date picker (SafePay history) and the profile/SafePay components.
+const settingsView = (name: keyof typeof import('../components/profile/SettingsViews')) =>
+  lazy(() => import('../components/profile/SettingsViews').then((m) => ({ default: m[name] as React.ComponentType })));
+const UsernameView = settingsView('UsernameView');
+const NameView = settingsView('NameView');
+const BioView = settingsView('BioView');
+const PictureView = settingsView('PictureView');
+const BannerView = settingsView('BannerView');
+const EmailView = settingsView('EmailView');
+const PhoneView = settingsView('PhoneView');
+const AddressesView = settingsView('AddressesView');
+const PasswordView = settingsView('PasswordView');
+const DeleteAccountView = settingsView('DeleteAccountView');
+const LocationView = settingsView('LocationView');
+const UpcomingPreviewView = settingsView('UpcomingPreviewView');
+const VisibilityView = settingsView('VisibilityView');
+const BlockedUsersView = settingsView('BlockedUsersView');
+const CookiesView = settingsView('CookiesView');
+const SessionsView = settingsView('SessionsView');
+const AboutView = settingsView('AboutView');
+const SubscriptionView = settingsView('SubscriptionView');
+const NotificationsView = settingsView('NotificationsView');
+const SeekerSettingsView = settingsView('SeekerSettingsView');
+const SafePayHistoryView = settingsView('SafePayHistoryView');
+const PayoutSettingsView = settingsView('PayoutSettingsView');
 
 // =======================
 // User Pages
@@ -324,28 +327,28 @@ export const routes: RouteObject[] = [
             path: '',
             element: <SettingsPage />,
             children: [
-              { index: true, element: <UsernameView /> },
-              { path: 'name', element: <NameView /> },
-              { path: 'bio', element: <BioView /> },
-              { path: 'picture', element: <PictureView /> },
-              { path: 'banner', element: <BannerView /> },
-              { path: 'email', element: <EmailView /> },
-              { path: 'phone', element: <PhoneView /> },
-              { path: 'addresses', element: <AddressesView /> },
-              { path: 'safepay', element: <SafePayHistoryView /> },
-              { path: 'payout', element: <PayoutSettingsView /> },
-              { path: 'password', element: <PasswordView /> },
-              { path: 'delete-account', element: <DeleteAccountView /> },
-              { path: 'location', element: <LocationView /> },
-              { path: 'upcoming', element: <UpcomingPreviewView /> },
-              { path: 'visibility', element: <VisibilityView /> },
-              { path: 'blocked', element: <BlockedUsersView /> },
-              { path: 'cookies', element: <CookiesView /> },
-              { path: 'sessions', element: <SessionsView /> },
-              { path: 'about', element: <AboutView /> },
-              { path: 'notifications', element: <NotificationsView /> },
-              { path: 'subscriptions', element: <SubscriptionView /> },
-              { path: 'seeker', element: <SeekerSettingsView /> },
+              { index: true, element: withSuspense(UsernameView) },
+              { path: 'name', element: withSuspense(NameView) },
+              { path: 'bio', element: withSuspense(BioView) },
+              { path: 'picture', element: withSuspense(PictureView) },
+              { path: 'banner', element: withSuspense(BannerView) },
+              { path: 'email', element: withSuspense(EmailView) },
+              { path: 'phone', element: withSuspense(PhoneView) },
+              { path: 'addresses', element: withSuspense(AddressesView) },
+              { path: 'safepay', element: withSuspense(SafePayHistoryView) },
+              { path: 'payout', element: withSuspense(PayoutSettingsView) },
+              { path: 'password', element: withSuspense(PasswordView) },
+              { path: 'delete-account', element: withSuspense(DeleteAccountView) },
+              { path: 'location', element: withSuspense(LocationView) },
+              { path: 'upcoming', element: withSuspense(UpcomingPreviewView) },
+              { path: 'visibility', element: withSuspense(VisibilityView) },
+              { path: 'blocked', element: withSuspense(BlockedUsersView) },
+              { path: 'cookies', element: withSuspense(CookiesView) },
+              { path: 'sessions', element: withSuspense(SessionsView) },
+              { path: 'about', element: withSuspense(AboutView) },
+              { path: 'notifications', element: withSuspense(NotificationsView) },
+              { path: 'subscriptions', element: withSuspense(SubscriptionView) },
+              { path: 'seeker', element: withSuspense(SeekerSettingsView) },
             ],
           },
         ],

@@ -80,7 +80,8 @@ const ACTIONS = {
   flag_set: {
     label: 'Change feature flag',
     prepare: async ({ key, enabled }) => {
-      if (!FLAG_KEY.test(String(key || ''))) throw bad('Not a feature flag.');
+      // A string only: an array would pass the test and become $in in the update below.
+      if (typeof key !== 'string' || !FLAG_KEY.test(key)) throw bad('Not a feature flag.');
       if (typeof enabled !== 'boolean') throw bad('enabled must be true or false.');
       if (!(await require('../../models/GlobalConfig').exists({ key }))) throw bad('Feature flag not found.', 404);
       return { key, enabled };

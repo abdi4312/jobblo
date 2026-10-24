@@ -93,7 +93,7 @@ export default function ProfileScreen() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const version = Constants.expoConfig?.version;
   const updateProfile = useUpdateProfile();
-  const cardRef = useRef<View | null>(null);
+  const cardRef = useRef<React.ComponentRef<typeof View>>(null);
   const [anchor, setAnchor] = useState<PopoverAnchor | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   // Utseende: same setting as Innstillinger → Utseende (saved on the device).

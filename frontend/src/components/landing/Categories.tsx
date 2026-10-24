@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import * as Icons from 'lucide-react';
+import { ArrowUpRight, LayoutGrid } from 'lucide-react';
+import { CategoryIcon } from '../CategoryIcon';
 import { useCategories } from '../../features/categories/hooks';
 import {
   CONTAINER,
@@ -37,7 +38,7 @@ export function Categories() {
             onClick={() => navigate('/search/job/all')}
             className={`mt-7 ${PILL_SECONDARY}`}
           >
-            <Icons.LayoutGrid size={17} strokeWidth={1.9} className="text-[#2E6641]" />
+            <LayoutGrid size={17} strokeWidth={1.9} className="text-[#2E6641]" />
             Se alle kategorier
           </button>
         </div>
@@ -50,9 +51,6 @@ export function Categories() {
                 </li>
               ))
             : categories.map((cat, i) => {
-                const LucideIcon =
-                  (Icons as unknown as Record<string, Icons.LucideIcon>)[cat.icon] ||
-                  Icons.HelpCircle;
                 return (
                   <li key={cat._id} className="border-b border-[#E6E7E1]">
                     <button
@@ -63,16 +61,11 @@ export function Categories() {
                       <span className={`w-9 shrink-0 tabular-nums ${MICRO_LABEL}`}>
                         {String(i + 1).padStart(2, '0')}
                       </span>
-                      <LucideIcon
-                        size={22}
-                        strokeWidth={1.7}
-                        className="shrink-0 text-[#2E6641]"
-                        aria-hidden="true"
-                      />
+                      <CategoryIcon name={cat.icon} size={22} strokeWidth={1.7} className="shrink-0 text-[#2E6641]" />
                       <span className="flex-1 text-[clamp(1.25rem,2.6vw,1.875rem)] font-semibold leading-tight tracking-[-0.035em] text-[#0B0B0B]">
                         {cat.name}
                       </span>
-                      <Icons.ArrowUpRight
+                      <ArrowUpRight
                         size={20}
                         strokeWidth={1.6}
                         aria-hidden="true"

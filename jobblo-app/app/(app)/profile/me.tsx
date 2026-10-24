@@ -179,7 +179,7 @@ export default function JobProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuTop, setMenuTop] = useState<number | undefined>();
-  const menuButton = useRef<View | null>(null);
+  const menuButton = useRef<React.ComponentRef<typeof View>>(null);
   const [logoutVisible, setLogoutVisible] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [openingBankId, setOpeningBankId] = useState(false);

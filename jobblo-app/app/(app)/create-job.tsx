@@ -434,7 +434,7 @@ export default function CreateJobScreen() {
   };
 
   // Where each field sits, so a failed "Neste" can scroll to the first error.
-  const scrollRef = useRef<ScrollView | null>(null);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const stepTopY = useRef(0);
   const sectionY = useRef<Record<string, number>>({});
   const scrollY = useRef(0);

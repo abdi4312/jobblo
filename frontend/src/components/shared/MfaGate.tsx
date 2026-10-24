@@ -1,6 +1,5 @@
-import { useEffect, useState, type ReactElement } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactElement } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
-import QRCode from 'react-qr-code';
 import { Copy, KeyRound, LogOut, ShieldCheck, Smartphone } from 'lucide-react';
 import mainLink from '../../api/mainURLs';
 import { useUserStore } from '../../stores/userStore';
@@ -9,6 +8,8 @@ import { Input } from '../developer/ui/input';
 import { AuthPending } from './ProtectedRoute';
 
 type Status = { required: boolean; enabled: boolean; verified: boolean };
+// Only admins setting up 2FA need the QR library — not every visitor in the main bundle.
+const QRCode = lazy(() => import('react-qr-code'));
 const message = (e: unknown) => (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Something went wrong — try again.';
 
 /**
@@ -95,7 +96,9 @@ export function MfaGate({ children }: { children: ReactElement }) {
               <>
                 <p className="text-sm text-muted-foreground">Admin and developer accounts need a second step at every sign-in. Scan this code with Google Authenticator, Microsoft Authenticator, 1Password or a similar app.</p>
                 <div className="mx-auto w-fit rounded-md bg-white p-3">
-                  <QRCode value={setup.otpauthUrl} size={176} />
+                  <Suspense fallback={<div className="size-44" />}>
+                    <QRCode value={setup.otpauthUrl} size={176} />
+                  </Suspense>
                 </div>
                 <details className="text-xs text-muted-foreground">
                   <summary className="cursor-pointer">Can't scan? Enter this key instead</summary>

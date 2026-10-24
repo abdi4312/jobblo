@@ -233,6 +233,9 @@ describe('access model and step-up', () => {
     await expect(ACTIONS.thresholds_set.prepare({ thresholds: {} })).rejects.toThrow(/Nothing/);
     expect(await ACTIONS.thresholds_set.prepare({ thresholds: { apiP95Ms: 1500 } })).toEqual({ thresholds: { apiP95Ms: 1500 } });
     await expect(ACTIONS.developer_access.prepare({ userId: 'x', access: 'admin' })).rejects.toThrow(/readonly or operations/);
+    // An array key passes a String() regex test and would update every listed key via $in.
+    await expect(ACTIONS.flag_set.prepare({ key: ['feature_x', 'stripe_mode'], enabled: true })).rejects.toThrow(/Not a feature flag/);
+    await expect(ACTIONS.flag_set.prepare({ key: 'stripe_mode', enabled: true })).rejects.toThrow(/Not a feature flag/);
     expect(ACTIONS.env_set).toBeUndefined(); // env values are .env-only, never set from the dashboard
     // IP blocking is self-service for operations developers; config changes still need approval.
     expect(ACTIONS.ip_block.selfService).toBe(true);

@@ -6,7 +6,7 @@ const { setCookie } = require('../utils/setCookie.js');
 const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 const { authLimiter, otpSendLimiter, otpVerifyLimiter } = require('../middleware/rateLimiter');
 const { generateTokens, createSession } = require('../utils/tokenUtils');
-const { mobileReturn, noStore } = require('../utils/oauthReturn');
+const { mobileReturn, noStore, takeOAuthPlatform } = require('../utils/oauthReturn');
 const webOAuth = require('./webOAuth');
 
 const express = require('express');
