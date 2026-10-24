@@ -55,6 +55,8 @@ const sessionSchema = new mongoose.Schema(
       required: true,
       index: { expires: 0 }, // TTL index for automatic cleanup
     },
+    // Set when the authenticator code was checked on this session (superAdmin/developer only).
+    mfaVerifiedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

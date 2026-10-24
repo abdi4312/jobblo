@@ -109,6 +109,22 @@ router.post('/login', authLimiter, authController.login);
 router.post('/logout', optionalAuthenticate, authController.logout);
 router.post('/refresh-token', authController.refreshToken);
 router.get('/profile', authenticate, authController.getProfile);
+
+// Authenticator-app 2FA (required for superAdmin / developer; see middleware/auth.js).
+const mfaController = require('../controllers/mfaController');
+const mfaVerifyLimiter = require('../middleware/rateLimiter').makeLimiter('mfa-verify', {
+  windowMs: 15 * 60 * 1000,
+  max: 6,
+  skipSuccessfulRequests: true,
+  // Per signed-in user; IPv6 addresses grouped by /56 (express-rate-limit's ipKeyGenerator).
+  keyGenerator: (req) => (req.user?._id ? `u:${req.user._id}` : require('express-rate-limit').ipKeyGenerator(req.ip)),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts', message: 'For mange forsøk. Vent 15 minutter og prøv igjen.', code: 'MFA_LOCKED' },
+});
+router.get('/mfa', authenticate, mfaController.status);
+router.post('/mfa/setup', authenticate, mfaController.setup);
+router.post('/mfa/verify', authenticate, mfaVerifyLimiter, mfaController.verify);
 router.get('/sessions', authenticate, authController.getSessions);
 // ⚠️ revoke-others MUST be before /:sessionId — otherwise Express matches it as a sessionId param
 router.delete('/sessions/revoke-others', authenticate, authController.revokeAllOtherSessions);

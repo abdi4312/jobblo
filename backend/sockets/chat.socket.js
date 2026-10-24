@@ -33,6 +33,11 @@ module.exports = (io) => {
       if (!sessionExists || sessionExists.userId.toString() !== decoded.id) {
         return next(new Error('Session expired or revoked'));
       }
+      // Same two-factor rule as authenticate(): no socket for an unverified admin session.
+      if (!sessionExists.mfaVerifiedAt) {
+        const user = await require('../models/User').findById(decoded.id).select('role');
+        if (require('../services/auth/mfa').requiresMfa(user)) return next(new Error('Two-factor authentication required'));
+      }
 
       socket.userId = String(decoded.id);
       socket.sessionId = decoded.sid;
@@ -180,3 +185,6 @@ module.exports = (io) => {
     });
   });
 };
+
+// Online users connected to THIS instance (Realtime Chat Monitor).
+module.exports.onlineCount = () => onlineUsers.size;
