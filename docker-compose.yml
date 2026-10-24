@@ -8,9 +8,10 @@ services:
     # Build the image using the Dockerfile inside the ./backend folder
     build: ./backend
 
-    # Map your computer's port 5001 to the container's port 5001
+    # Map port 5001 on THIS computer only (127.0.0.1) to the container. Without the
+    # address Docker publishes it on every network interface, reachable from the LAN.
     ports:
-      - "5001:5001"
+      - "127.0.0.1:5001:5001"
 
     # Load your secrets/settings from backend/.env
     env_file:
