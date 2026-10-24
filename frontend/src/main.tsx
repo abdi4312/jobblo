@@ -11,6 +11,7 @@ import { routes } from './routing/Routes.tsx';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { initCookieConsent } from './utils/cookieConsent';
+import { startRum, trackView } from './lib/rum';
 import { useUserStore } from './stores/userStore';
 
 // Re-inject the ad script for a returning visitor who already accepted.
@@ -33,6 +34,16 @@ const queryClient = new QueryClient({
 });
 
 const router = createBrowserRouter(routes);
+
+// Real-user monitoring (anonymous; see lib/rum.ts): landing view + one view per route change.
+startRum();
+trackView();
+let lastPath = window.location.pathname;
+router.subscribe((state) => {
+  if (state.location.pathname === lastPath) return;
+  lastPath = state.location.pathname;
+  trackView();
+});
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

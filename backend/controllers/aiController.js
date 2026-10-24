@@ -23,6 +23,7 @@ function getClient() {
       apiKey: process.env.OPENAI_API_KEY,
       timeout: 25_000,
       maxRetries: 1,
+      fetch: require('../services/monitoring/externalCalls').timedFetch('openai'), // latency/failures for the developer console
     });
   }
   return _client;
@@ -35,6 +36,7 @@ function getClient() {
 // evals/results/after-gpt35.json.
 const DEFAULT_MODEL = 'gpt-4o-mini';
 const MODEL = process.env.OPENAI_MODEL || DEFAULT_MODEL;
+const { recordAiUsage } = require('../services/monitoring/costs');
 const VISION_MODEL = process.env.OPENAI_VISION_MODEL || MODEL;
 
 let _warnedAboutModel = false;
@@ -137,6 +139,7 @@ async function _callAi(context) {
   warnIfWeakModel();
   const request = buildRequest(context, MODEL);
   const completion = await getClient().chat.completions.create(request);
+  recordAiUsage(MODEL, completion.usage, 'text'); // token counts only, for the cost center
   const choice = completion.choices && completion.choices[0];
 
   // A strict-schema refusal is a distinct outcome from a bad answer: the model
@@ -253,6 +256,7 @@ async function _callVisionAi(file, categoryNames, lang) {
       : { type: 'json_object' },
   });
 
+  recordAiUsage(VISION_MODEL, response.usage, 'image');
   const choice = response.choices && response.choices[0];
   if (choice?.message?.refusal) throw new Error(`AI declined to answer: ${choice.message.refusal}`);
   const content = choice?.message?.content?.toString().trim();

@@ -97,6 +97,7 @@ function secretKeyForMode(testMode) {
 }
 
 async function getStripeForMode(testMode) {
+  require('../services/monitoring/faults').assertNoFault('stripe'); // staging failure simulator only
 
   const secretKey = secretKeyForMode(testMode);
   const expectedPrefix = testMode ? /^(?:sk|rk)_test_.+/ : /^(?:sk|rk)_live_.+/;
@@ -117,6 +118,10 @@ async function getStripeForMode(testMode) {
     maxNetworkRetries: 2,
     timeout: 20000,
   });
+  // API latency for the developer dashboard. Guarded: tests mock the client.
+  if (typeof cachedClient.on === 'function') {
+    cachedClient.on('response', (e) => require('../services/monitoring/apm').recordStripe(e));
+  }
   cachedMode = testMode;
   cachedSecretKey = secretKey;
   console.log(`Stripe client initialized: ${testMode ? 'TEST' : 'PRODUCTION'} mode`);

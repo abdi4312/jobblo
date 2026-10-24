@@ -13,6 +13,48 @@ class StripeConnectUnavailableError extends Error {
   }
 }
 
+/**
+ * Pure: is this Stripe account allowed to receive SafePay payouts? The one definition used by
+ * the payout gate (getConnectReadiness) and the developer Connect Health Center.
+ */
+function readinessFromAccount(account) {
+  const requirements = account.requirements || {};
+  const currentlyDue = requirements.currently_due || [];
+  const pastDue = requirements.past_due || [];
+  const pendingVerification = requirements.pending_verification || [];
+  const transfersEnabled = account.capabilities?.transfers === 'active';
+  const ready =
+    !account.deleted &&
+    account.payouts_enabled === true &&
+    transfersEnabled &&
+    account.details_submitted === true &&
+    !requirements.disabled_reason &&
+    currentlyDue.length === 0 &&
+    pastDue.length === 0 &&
+    pendingVerification.length === 0;
+  return {
+    ready,
+    payoutEnabled: account.payouts_enabled === true,
+    transfersEnabled,
+    detailsSubmitted: account.details_submitted === true,
+    chargesEnabled: account.charges_enabled === true,
+    disabledReason: requirements.disabled_reason || null,
+    currentlyDue,
+    pastDue,
+    pendingVerification,
+    eventuallyDue: requirements.eventually_due || [],
+    currentDeadline: requirements.current_deadline ? new Date(requirements.current_deadline * 1000) : null,
+    errors: (requirements.errors || []).map((e) => ({ requirement: e.requirement, code: e.code, reason: e.reason })),
+    payoutOnboardingStatus: ready
+      ? 'enabled'
+      : requirements.disabled_reason
+        ? 'restricted'
+        : pendingVerification.length > 0
+          ? 'pending_verification'
+          : 'started',
+  };
+}
+
 async function getConnectReadiness(userId, selectedConfig) {
   try {
     const config = selectedConfig || await getStripeConfiguration();
@@ -54,36 +96,16 @@ async function getConnectReadiness(userId, selectedConfig) {
       error.code = 'STRIPE_CONNECT_ACCOUNT_MODE_MISMATCH';
       throw error;
     }
-    const requirements = account.requirements || {};
-    const currentlyDue = requirements.currently_due || [];
-    const pastDue = requirements.past_due || [];
-    const pendingVerification = requirements.pending_verification || [];
-    const transfersEnabled = account.capabilities?.transfers === 'active';
-    const ready =
-      !account.deleted &&
-      account.payouts_enabled === true &&
-      transfersEnabled &&
-      account.details_submitted === true &&
-      !requirements.disabled_reason &&
-      currentlyDue.length === 0 &&
-      pastDue.length === 0 &&
-      pendingVerification.length === 0;
-
+    const r = readinessFromAccount(account);
     return {
       ...base,
-      ready,
-      reason: ready ? null : 'onboarding_incomplete',
-      payoutEnabled: account.payouts_enabled === true,
-      transfersEnabled,
-      detailsSubmitted: account.details_submitted === true,
-      chargesEnabled: account.charges_enabled === true,
-      payoutOnboardingStatus: ready
-        ? 'enabled'
-        : requirements.disabled_reason
-          ? 'restricted'
-          : pendingVerification.length > 0
-            ? 'pending_verification'
-            : 'started',
+      ready: r.ready,
+      reason: r.ready ? null : 'onboarding_incomplete',
+      payoutEnabled: r.payoutEnabled,
+      transfersEnabled: r.transfersEnabled,
+      detailsSubmitted: r.detailsSubmitted,
+      chargesEnabled: r.chargesEnabled,
+      payoutOnboardingStatus: r.payoutOnboardingStatus,
     };
   } catch (error) {
     if (
@@ -124,6 +146,7 @@ function sendConnectReadinessFailure(res, errorOrReadiness) {
 
 module.exports = {
   getConnectReadiness,
+  readinessFromAccount,
   sendConnectReadinessFailure,
   StripeConnectUnavailableError,
   REQUIRED_MESSAGE,

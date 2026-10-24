@@ -57,7 +57,9 @@ router.get('/overview', dashboardController.getOverview);
 router.get('/users', usersAdminController.getUsers);
 router.post('/users', usersAdminController.createUser);
 router.get('/users/:id', usersAdminController.getUserById);
+router.get('/users/:id/overview', require('../../controllers/admin/userOverviewController').getUserOverview);
 router.put('/users/:id/role', usersAdminController.changeUserRole);
+router.post('/users/:id/mfa/reset', require('../../controllers/mfaController').resetForUser);
 router.put('/users/:id/status', usersAdminController.updateUserStatus);
 router.put('/users/:id/verify', usersAdminController.verifyUser);
 router.delete('/users/:id', usersAdminController.softDeleteUser);
@@ -68,6 +70,8 @@ router.delete('/users/:id/sessions', usersAdminController.revokeUserSessions);
 // ── Orders ─────────────────────────────────────────────────────────────────
 router.get('/orders', ordersAdminController.getOrders);
 router.get('/orders/:id', ordersAdminController.getOrderById);
+// Full lifecycle (payment, SafePay, payout, disputes, timeline, health) — same view as Job Diagnostics.
+router.get('/orders/:id/details', require('../../controllers/developer/diagnosticsController').getJob);
 router.put('/orders/:id/status', ordersAdminController.updateOrderStatus);
 
 // ── Services ───────────────────────────────────────────────────────────────

@@ -67,7 +67,22 @@ async function logApplicationError({
     // Create an ErrorLog record (best-effort)
     const referenceId = generateReference({ prefix: 'ERR' });
     try {
+      // Same error seen before: inherit its triage status; a resolved one comes back as reopened.
+      let status = 'open';
+      if (ErrorLog.db?.readyState === 1) {
+        const prior = await ErrorLog.findOne({
+          errorCode: errorCode || 'INTERNAL_SERVER_ERROR',
+          route: requestPath,
+          message: errorMessage.substring(0, 500),
+        })
+          .sort({ createdAt: -1 })
+          .select('status')
+          .lean();
+        if (prior?.status === 'resolved') status = 'reopened';
+        else if (prior?.status) status = prior.status;
+      }
       await ErrorLog.create({
+        status,
         referenceId,
         errorCode: errorCode || 'INTERNAL_SERVER_ERROR',
         severity,

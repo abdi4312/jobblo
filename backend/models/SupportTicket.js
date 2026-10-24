@@ -27,6 +27,24 @@ const supportTicketSchema = new mongoose.Schema(
     },
     // Set when the request arrives from a specific order, so support has context.
     orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null },
+
+    // Technical triage (developer dashboard). Customer-facing fields above are unchanged.
+    priority: { type: String, enum: ['low', 'medium', 'high', 'critical'], default: 'medium' },
+    assignee: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    escalated: { type: Boolean, default: false },
+    relatedErrorRef: { type: String, default: null }, // ErrorLog referenceId
+    incidentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Incident', default: null },
+    resolvedAt: { type: Date, default: null },
+    history: [
+      {
+        _id: false,
+        at: { type: Date, default: Date.now },
+        by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        kind: { type: String, enum: ['note', 'status', 'priority', 'assign', 'escalate', 'link'] },
+        text: { type: String, maxlength: 2000 },
+        internal: { type: Boolean, default: true },
+      },
+    ],
   },
   { timestamps: true }
 );

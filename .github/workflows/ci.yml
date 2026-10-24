@@ -53,8 +53,17 @@ jobs:
       - name: Test
         if: steps.changes.outputs.backend == 'true'
         run: |
-          npm run test:ci
+          npm run test:quality
           echo '### Backend tests: passed' >> "$GITHUB_STEP_SUMMARY"
+
+      # Sends totals, coverage and failing tests to the developer console (Test & Quality).
+      # Runs even when tests fail; does nothing until both secrets are set.
+      - name: Report test results
+        if: always() && steps.changes.outputs.backend == 'true'
+        env:
+          QUALITY_REPORT_URL: ${{ secrets.QUALITY_REPORT_URL }}
+          QUALITY_INGEST_TOKEN: ${{ secrets.QUALITY_INGEST_TOKEN }}
+        run: node scripts/quality-report.js backend jest-results.json coverage/coverage-summary.json
 
   # ── Frontend ─────────────────────────────────────────────────────────────────
   frontend:
